@@ -178,18 +178,24 @@ bool CGameRules::CanHavePlayerItem(CBasePlayer* pPlayer, CBasePlayerItem* pWeapo
 void CGameRules::RefreshSkillData()
 {
 	int iSkill;
+	bool simplify = false;
 
 	iSkill = (int)CVAR_GET_FLOAT("skill");
-	g_iSkillLevel = iSkill;
 
 	if (iSkill < 1)
 	{
+		if (iSkill == 0)
+		{
+			simplify = true;
+		}
 		iSkill = 1;
 	}
 	else if (iSkill > 3)
 	{
 		iSkill = 3;
 	}
+
+	g_iSkillLevel = iSkill;
 
 	gSkillData.iSkillLevel = iSkill;
 
@@ -414,6 +420,21 @@ void CGameRules::RefreshSkillData()
 	gSkillData.plrStomach = GetSkillCvar("sk_player_stomach");
 	gSkillData.plrLeg = GetSkillCvar("sk_player_leg");
 	gSkillData.plrArm = GetSkillCvar("sk_player_arm");
+
+	if (simplify)
+	{
+		gSkillData.monHead = gSkillData.monHead * 2;
+		gSkillData.monChest = gSkillData.monChest * 2;
+		gSkillData.monStomach = gSkillData.monStomach * 2;
+		gSkillData.monLeg = gSkillData.monLeg * 2;
+		gSkillData.monArm = gSkillData.monArm * 2;
+
+		gSkillData.plrHead = gSkillData.plrHead / 2;
+		gSkillData.plrChest = gSkillData.plrChest / 2;
+		gSkillData.plrStomach = gSkillData.plrStomach / 2;
+		gSkillData.plrLeg = gSkillData.plrLeg / 2;
+		gSkillData.plrArm = gSkillData.plrArm / 2;
+	}
 }
 
 //=========================================================

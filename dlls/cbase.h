@@ -318,6 +318,7 @@ public:
 		void				SetParent(int m_iNewParent);
 		virtual void 			SetParent(void) { SetParent(m_iParent); }
 		virtual void 				ProcessChild(void);
+		int			m_iStyle; // LRC - almost anything can have a lightstyle these days...
 
 
 

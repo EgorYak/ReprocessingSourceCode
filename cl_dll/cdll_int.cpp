@@ -29,6 +29,7 @@
 #include <string.h>
 #include "vgui_int.h"
 #include "mp3.h"
+//#include "soundengine.h"
 
 #include "Platform.h"
 #include "Exports.h"
@@ -40,6 +41,7 @@
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
 CMP3 gMP3;
+//CSoundEngine gSoundEngine;
 TeamFortressViewport* gViewPort = NULL;
 
 

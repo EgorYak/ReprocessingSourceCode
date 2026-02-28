@@ -549,6 +549,10 @@ cvar_t sk_player_leg3 = {"sk_player_leg3", "1"};
 
 // END Cvars for Skill Level settings
 
+// Cvars for testing features
+
+cvar_t sk_adv_recoil = { "sk_adv_recoil", "1" };
+
 // Register your console variables here
 // This gets called one time when the game is initialied
 void GameDLLInit()
@@ -591,6 +595,9 @@ void GameDLLInit()
 
 	//CVAR_REGISTER(&mp3player);
 	//CVAR_REGISTER(&mp3volume);
+
+	// CS recoil
+	CVAR_REGISTER(&sk_adv_recoil);
 
 	CVAR_REGISTER(&mp_chattime);
 

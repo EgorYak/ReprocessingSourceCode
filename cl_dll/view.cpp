@@ -19,6 +19,7 @@
 #include "shake.h"
 #include "hltv.h"
 #include "Exports.h"
+//#include "soundengine.h"
 
 int CL_IsThirdPerson();
 void CL_CameraOffset(float* ofs);
@@ -1926,6 +1927,7 @@ void DLLEXPORT V_CalcRefdef(struct ref_params_s* pparams)
 	}
 #endif
 */
+	//gSoundEngine.SetupFrame(pparams);
 }
 
 /*

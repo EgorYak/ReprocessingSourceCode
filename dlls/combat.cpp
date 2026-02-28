@@ -1023,6 +1023,7 @@ bool CBaseMonster::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, f
 	if (m_MonsterState == MONSTERSTATE_SCRIPT)
 	{
 		SetConditions(bits_COND_LIGHT_DAMAGE);
+		SetConditions(bits_COND_GET_DAMAGE);
 		return false;
 	}
 

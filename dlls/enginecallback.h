@@ -21,6 +21,15 @@
 // Holds engine functionality callbacks
 inline enginefuncs_t g_engfuncs;
 
+/*
+// Fograin92: Attached new audio functions
+//==============SOUND ENGINE FUNCTIONS==============//
+extern void EXPrecacheSound( char *szFile );
+extern void EXEmitSound( edict_t *entity, int channel, const char *sample, float volume, float attenuation, int fFlags, int pitch );
+extern void EXEmitAmbientSound(edict_t *entity, float *pos, const char *samp, float vol, float attenuation, int fFlags, int pitch );
+//==============SOUND ENGINE FUNCTIONS==============//
+*/
+
 // The actual engine callbacks
 #define GETPLAYERUSERID (*g_engfuncs.pfnGetPlayerUserId)
 #define PRECACHE_MODEL (*g_engfuncs.pfnPrecacheModel)

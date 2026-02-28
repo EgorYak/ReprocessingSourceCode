@@ -32,6 +32,8 @@
 #define ACT_T_STRIKE 1030
 #define ACT_T_REARIDLE 1040
 
+#define SF_TENT_ONE_FLOOR 1024
+
 class CTentacle : public CBaseMonster
 {
 public:
@@ -637,7 +639,8 @@ void CTentacle::Cycle()
 				if (RANDOM_LONG(0, 15) == 0)
 				{
 					// idle on new level
-					m_iGoalAnim = LookupActivity(ACT_T_IDLE + RANDOM_LONG(0, 3));
+					if ((pev->spawnflags & SF_TENT_ONE_FLOOR) == 0)
+						m_iGoalAnim = LookupActivity(ACT_T_IDLE + RANDOM_LONG(0, 3));
 				}
 				else if (RANDOM_LONG(0, 3) == 0)
 				{
@@ -725,7 +728,10 @@ void CTentacle::CommandUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TY
 	case USE_OFF:
 		pev->takedamage = DAMAGE_NO;
 		SetThink(&CTentacle::DieThink);
-		m_iGoalAnim = TENTACLE_ANIM_Engine_Death1;
+		//if ((pev->spawnflags & SF_TENT_ONE_FLOOR) == 0)
+			m_iGoalAnim = TENTACLE_ANIM_Engine_Death1;
+		//else
+		//	m_iGoalAnim = TENTACLE_ANIM_Engine_Death3;
 		break;
 	case USE_ON:
 		if (pActivator)
@@ -977,6 +983,9 @@ void CTentacle::HitTouch(CBaseEntity* pOther)
 	if (pOther->pev->modelindex == pev->modelindex)
 		return;
 
+	if (FClassnameIs(pOther->pev, "monster_tentaclemaw"))
+		return;
+
 	if (m_flHitTime > gpGlobals->time)
 		return;
 
@@ -1029,13 +1038,29 @@ void CTentacle::Killed(entvars_t* pevAttacker, int iGib)
 	return;
 }
 
-
+#define MAW_CLOSE			1
+#define MAW_SEARCH_RADIUS	256
 
 class CTentacleMaw : public CBaseMonster
 {
 public:
 	void Spawn() override;
 	void Precache() override;
+	int  Classify(void) { return	CLASS_INSECT; }
+	void EXPORT DieThink();
+	//	void EXPORT LeapTouch ( CBaseEntity *pOther );
+	void Killed(entvars_t *pevAttacker, int iGib);
+
+	void HandleAnimEvent(MonsterEvent_t *pEvent);
+	void EXPORT MonsterThink();
+
+	//	void EXPORT Touch( CBaseEntity *pOther );
+	void Attack();
+
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
+
+	int			m_gibsToShoot;
+	CBaseEntity *pVictim;
 };
 
 LINK_ENTITY_TO_CLASS(monster_tentaclemaw, CTentacleMaw);
@@ -1049,18 +1074,152 @@ void CTentacleMaw::Spawn()
 	SET_MODEL(ENT(pev), "models/maw.mdl");
 	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
 
-	pev->solid = SOLID_NOT;
-	pev->movetype = MOVETYPE_STEP;
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_FLY;
+	m_bloodColor = BLOOD_COLOR_GREEN;
 	pev->effects = 0;
-	pev->health = 75;
+	pev->health = 25;
 	pev->yaw_speed = 8;
 	pev->sequence = 0;
+	m_MonsterState = MONSTERSTATE_NONE;
 
-	pev->angles.x = 90;
+	MonsterInit();
+
+	// pev->angles.x = 90;
 	// ResetSequenceInfo( );
 }
 
 void CTentacleMaw::Precache()
 {
 	PRECACHE_MODEL("models/maw.mdl");
+	PRECACHE_SOUND("tentacle/maw_die.wav");
+	PRECACHE_SOUND("debris/flesh6.wav");
+	PRECACHE_SOUND("debris/flesh7.wav");
+	PRECACHE_SOUND("debris/flesh3.wav");
+}
+
+void CTentacleMaw::Killed(entvars_t *pevAttacker, int iGib)
+{
+	EMIT_SOUND(ENT(pev), CHAN_VOICE, "tentacle/maw_die.wav", 1.0, ATTN_NORM);
+	m_gibsToShoot = RANDOM_LONG(10, 15);
+	pev->solid = SOLID_NOT;
+	SetThink(&CTentacleMaw::DieThink);
+	pev->nextthink = gpGlobals->time + 0.1;
+	pev->deadflag = DEAD_DEAD;
+	CBaseMonster::FCheckAITrigger();
+	SetActivity(ACT_DIESIMPLE);
+}
+
+void CTentacleMaw::DieThink()
+{
+	pev->nextthink = gpGlobals->time + 0.25;
+
+	Vector vecShootDir;
+
+	float m_flGibVelocity = 1000;
+	float m_flVariance = 10.0;
+	float m_flGibLife = 5.0;
+
+	if (m_gibsToShoot > 0)
+	{
+		vecShootDir = pev->movedir;
+
+		vecShootDir = vecShootDir + gpGlobals->v_right * RANDOM_FLOAT(-1, 1) * m_flVariance;;
+		vecShootDir = vecShootDir + gpGlobals->v_forward * RANDOM_FLOAT(-1, 1) * m_flVariance;;
+		vecShootDir = vecShootDir + gpGlobals->v_up * RANDOM_FLOAT(-1, 1) * m_flVariance;;
+
+		vecShootDir = vecShootDir.Normalize();
+		CGib *pGib = GetClassPtr((CGib *)NULL);
+
+		pGib->Spawn("models/agibs.mdl");
+		switch (RANDOM_LONG(0, 2))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pGib->pev), CHAN_VOICE, "debris/flesh6.wav", 1.0, ATTN_NORM);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pGib->pev), CHAN_VOICE, "debris/flesh7.wav", 1.0, ATTN_NORM);
+			break;
+		case 2:
+			EMIT_SOUND(ENT(pGib->pev), CHAN_VOICE, "debris/flesh3.wav", 1.0, ATTN_NORM);
+			break;
+		}
+		pGib->m_bloodColor = BLOOD_COLOR_YELLOW;
+		pGib->pev->body = RANDOM_LONG(1, pev->body - 1);
+
+		if (pGib)
+		{
+			pGib->pev->origin = pev->origin;
+			pGib->pev->origin.z = pev->origin.z + 88;
+			pGib->pev->velocity = vecShootDir * m_flGibVelocity;
+
+			pGib->pev->avelocity.x = RANDOM_FLOAT(100, 200);
+			pGib->pev->avelocity.y = RANDOM_FLOAT(100, 300);
+			pGib->pev->avelocity.z = RANDOM_FLOAT(-800, -1200);
+
+			float thinkTime = pGib->pev->nextthink - gpGlobals->time;
+
+			pGib->m_lifeTime = (m_flGibLife * RANDOM_FLOAT(0.95, 1.05));	// +/- 5%
+			if (pGib->m_lifeTime < thinkTime)
+			{
+				pGib->pev->nextthink = gpGlobals->time + pGib->m_lifeTime;
+				pGib->m_lifeTime = 0;
+			}
+
+		}
+		m_gibsToShoot--;
+	}
+	else
+	{
+		for (int k = 5; k > 0; k--)
+		{
+			UTIL_BloodStream(pev->origin, UTIL_RandomBloodVector(), BLOOD_COLOR_YELLOW, RANDOM_LONG(50, 150));
+		}
+		pev->solid = SOLID_NOT;
+		SetThink(NULL);
+		//		UTIL_Remove( this );
+	}
+}
+
+void CTentacleMaw::HandleAnimEvent(MonsterEvent_t *pEvent)
+{
+	switch (pEvent->event)
+	{
+	case MAW_CLOSE:
+		Attack();
+		break;
+	}
+}
+
+void CTentacleMaw::MonsterThink(void)
+{
+	CBaseEntity *pEntity = NULL;
+
+	if (UTIL_FindEntityInSphere(pEntity, pev->origin, MAW_SEARCH_RADIUS) != NULL && m_flNextAttack < gpGlobals->time)
+	{
+		pVictim = pEntity;
+		m_flNextAttack = gpGlobals->time + 5.0;
+		SetActivity(ACT_MELEE_ATTACK1);
+	}
+}
+
+void CTentacleMaw::Attack(void)
+{
+	for (int k = 5; k > 0; k--)
+	{
+		UTIL_BloodStream(pev->origin, UTIL_RandomBloodVector(), BLOOD_COLOR_YELLOW, RANDOM_LONG(50, 150));
+	}
+
+	if ((pev->origin - pVictim->pev->origin).Length() < 256 && !FClassnameIs(pVictim->pev, "monster_tentacle"))
+		pVictim->TakeDamage(pev, pev, 50, DMG_ACID);
+	//	RadiusDamage(pev, pev, 100.0, CLASS_NONE, DMG_ACID);
+}
+
+bool CTentacleMaw::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	if (bitsDamageType & (DMG_BULLET | DMG_BLAST)) flDamage /= 2;
+
+	if (bitsDamageType & (DMG_POISON | DMG_ACID))	flDamage = 0;
+
+	return CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }

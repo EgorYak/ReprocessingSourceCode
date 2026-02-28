@@ -26,6 +26,7 @@
 #include "vgui_int.h"
 #include "vgui_TeamFortressViewport.h"
 #include "mp3.h"
+//#include "soundengine.h"
 
 #include "demo.h"
 #include "demo_api.h"
@@ -425,6 +426,7 @@ void CHud::Init()
 	m_AmmoSecondary.Init();
 	m_TextMessage.Init();
 	m_StatusIcons.Init();
+	//gSoundEngine.Init();
 
 	m_Zoom.Init();
 
@@ -446,6 +448,7 @@ CHud::~CHud()
 	delete[] m_rgszSpriteNames;
 
 	gMP3.Shutdown();
+	//gSoundEngine.ResetEngine();
 
 	if (m_pHudList)
 	{
@@ -458,6 +461,7 @@ CHud::~CHud()
 		}
 		m_pHudList = NULL;
 	}
+	//gSoundEngine.Shutdown();
 }
 
 // GetSpriteIndex()
@@ -489,6 +493,8 @@ void CHud::VidInit()
 
 	m_hsprLogo = 0;
 	m_hsprCursor = 0;
+
+	//gSoundEngine.ResetEngine();
 
 	m_iFakeMonsCount = 0;
 
@@ -581,6 +587,8 @@ void CHud::VidInit()
 	m_TextMessage.VidInit();
 	m_StatusIcons.VidInit();
 	GetClientVoiceMgr()->VidInit();
+
+	//gSoundEngine.VidInit();
 
 	m_Zoom.VidInit();
 }

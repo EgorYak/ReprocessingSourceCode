@@ -56,7 +56,6 @@ public:
 
 	// Bmodels don't go across transitions
 	int ObjectCaps() override { return CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	int m_iStyle;
 };
 
 LINK_ENTITY_TO_CLASS(func_wall, CFuncWall);
@@ -67,9 +66,13 @@ void CFuncWall::Spawn()
 	pev->movetype = MOVETYPE_PUSH; // so it doesn't get pushed by anything
 	pev->solid = SOLID_BSP;
 	SET_MODEL(ENT(pev), STRING(pev->model));
-	//LRC 
-	if (m_iStyle >= 32) LIGHT_STYLE(m_iStyle, "a");
-	else if (m_iStyle <= -32) LIGHT_STYLE(-m_iStyle, "z");
+	//LRC
+	//ALERT(at_console, "m_iStyle = %d\n", m_iStyle);
+	if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF) && m_iStyle != 0)
+		LIGHT_STYLE(m_iStyle, "a");
+	else if (m_iStyle != 0) LIGHT_STYLE(m_iStyle, "m");
+	//else if (m_iStyle >= 32) LIGHT_STYLE(m_iStyle, "z");
+	//else if (m_iStyle <= -32) LIGHT_STYLE(-m_iStyle, "a");
 
 	// If it can't move/go away, it's really part of the world
 	pev->flags |= FL_WORLDBRUSH;
@@ -81,20 +84,34 @@ void CFuncWall::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useT
 	if (ShouldToggle(useType, pev->frame != 0))
 	{
 		pev->frame = 1 - pev->frame;
+		if (!ShouldToggle(useType, !FBitSet(pev->spawnflags, SF_LIGHT_START_OFF)))
+			return;
+		if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF) && m_iStyle != 0)
+		{
+			LIGHT_STYLE(m_iStyle, "m");
+			ClearBits(pev->spawnflags, SF_LIGHT_START_OFF);
+		}
+		else if (m_iStyle != 0)
+		{
+			LIGHT_STYLE(m_iStyle, "a");
+			SetBits(pev->spawnflags, SF_LIGHT_START_OFF);
+		}
+		/*
 		if (m_iStyle >= 32)
 		{
 			if (pev->frame)
-				LIGHT_STYLE(m_iStyle, "z");
-			else
 				LIGHT_STYLE(m_iStyle, "a");
+			else
+				LIGHT_STYLE(m_iStyle, "z");
 		}
 		else if (m_iStyle <= -32)
 		{
 			if (pev->frame)
-				LIGHT_STYLE(-m_iStyle, "a");
-			else
 				LIGHT_STYLE(-m_iStyle, "z");
+			else
+				LIGHT_STYLE(-m_iStyle, "a");
 		}
+		*/
 	}
 }
 

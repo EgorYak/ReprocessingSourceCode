@@ -3538,7 +3538,7 @@ bool CBaseMonster::FCheckAITrigger()
 		}
 		break;
 	case AITRIGGER_TAKEDAMAGE:
-		if ((m_afConditions & (bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE)) != 0)
+		if ((m_afConditions & (bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE | bits_COND_GET_DAMAGE)) != 0)
 		{
 			fFireTarget = true;
 		}

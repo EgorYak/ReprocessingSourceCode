@@ -685,7 +685,9 @@ void EV_FireMP5(event_args_t* args)
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation(MP5_FIRE1 + gEngfuncs.pfnRandomLong(0, 2), 0);
 
-		V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-2, 2));
+		bool sim_rec = 0 != args->bparam2;
+		if (sim_rec)
+			V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-2, 2));
 	}
 
 	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);
@@ -743,7 +745,9 @@ void EV_FireM16(event_args_t* args)
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation(M16_FIRE1 + gEngfuncs.pfnRandomLong(0, 2), 0);
 
-		V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-3, 3));
+		bool sim_rec = 0 != args->bparam2;
+		if (sim_rec)
+			V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-3, 3));
 	}
 
 	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);
@@ -1555,7 +1559,9 @@ void EV_HornetGunFire(event_args_t* args)
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation(HGUN_SHOOT, iBody);
 
-		V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-4, 4));
+		bool sim_rec = 0 != args->bparam2;
+		if (sim_rec)
+			V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-4, 4));
 	}
 
 	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);

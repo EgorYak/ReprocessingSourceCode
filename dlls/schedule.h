@@ -282,6 +282,8 @@ struct WayPoint_t
 #define bits_COND_SEE_NEMESIS (1 << 22)		// see my nemesis
 #define bits_COND_ENEMY_LOST			( 1 << 23) // did not observe an enemy for a while
 
+#define bits_COND_GET_DAMAGE			( 1 << 24) // get damage - to avoid interupt script in damage, but work with conditions
+
 #define bits_COND_SPECIAL1 (1 << 28) // Defined by individual monster
 #define bits_COND_SPECIAL2 (1 << 29) // Defined by individual monster
 

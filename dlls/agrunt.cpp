@@ -592,8 +592,6 @@ void CAGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 void CAGrunt::Spawn()
 {
 	Precache();
-
-	Precache();
 	if (pev->model)
 		SET_MODEL(ENT(pev), STRING(pev->model));
 	else

@@ -291,6 +291,8 @@ bool CHudAmmo::Init()
 	CVAR_CREATE("hud_drawhistory_time", HISTORY_DRAW_TIME, 0);
 	CVAR_CREATE("hud_fastswitch", "0", FCVAR_ARCHIVE); // controls whether or not weapons can be selected in one keypress
 
+	CVAR_CREATE("crosshair_alpha", "100", FCVAR_ARCHIVE);
+
 	m_iFlags |= HUD_ACTIVE; //!!!
 
 	gWR.Init();
@@ -493,6 +495,49 @@ void WeaponsResource::SelectSlot(int iSlot, bool fAdvance, int iDirection)
 	else
 		gpActiveSel = p;
 }
+
+#undef SetCrosshair
+void CHudAmmo::SetCrosshair_Alt(HSPRITE WSpr, Rect WRect, int r, int g, int b)
+{
+	hActualCross = WSpr;
+	rcActualCross = WRect;
+}
+
+void CHudAmmo::DrawCrosshair()
+{
+	float show = CVAR_GET_FLOAT("crosshair");
+	if (!hActualCross || !show || gHUD.m_Zoom.m_iHudMode)
+	{
+		return;
+	}
+	int r, g, b;
+	int x, y;
+	int a = CVAR_GET_FLOAT("crosshair_alpha");
+	if (m_pWeapon->iClip == 0 || \
+		( (m_pWeapon->iClip == 0 || m_pWeapon->iClip == -1) && \
+		gWR.CountAmmo(m_pWeapon->iAmmoType) == 0) \
+		)
+	{
+		r = 250;
+		g = 0;
+		b = 0;
+	}
+	else
+	{
+		UnpackRGB(r, g, b, RGB_YELLOWISH);
+		//r = 255;
+		//g = 255;
+		//b = 255;
+	}
+	ScaleColors(r, g, b, a);
+	int spry = rcActualCross.bottom - rcActualCross.top;
+	int sprx = rcActualCross.right - rcActualCross.left;
+	y = gHUD.m_iHudScaleHeight / 2 - spry / 2;
+	x = gHUD.m_iHudScaleWidth / 2 - sprx / 2;
+	SPR_Set(hActualCross, r, g, b);
+	SPR_DrawAdditive(0, x, y, &rcActualCross);
+}
+#define SetCrosshair CHudAmmo::SetCrosshair_Alt
 
 //------------------------------------------------------------------------
 // Message Handlers
@@ -889,6 +934,8 @@ bool CHudAmmo::Draw(float flTime)
 	UnpackRGB(r, g, b, RGB_YELLOWISH);
 
 	ScaleColors(r, g, b, a);
+
+	DrawCrosshair();
 
 	// Does this weapon have a clip?
 	//y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;

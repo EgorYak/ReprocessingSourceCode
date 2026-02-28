@@ -104,6 +104,8 @@ public:
 	void Think() override;
 	void Reset() override;
 	bool DrawWList(float flTime);
+	void SetCrosshair_Alt(HSPRITE WSpr, Rect WRect, int r, int g, int b);
+	void DrawCrosshair();
 	bool MsgFunc_CurWeapon(const char* pszName, int iSize, void* pbuf);
 	bool MsgFunc_WeaponList(const char* pszName, int iSize, void* pbuf);
 	bool MsgFunc_AmmoX(const char* pszName, int iSize, void* pbuf);
@@ -133,6 +135,9 @@ private:
 	WEAPON* m_pWeapon;
 	int m_HUD_bucket0;
 	int m_HUD_selection;
+
+	HSPRITE hActualCross;
+	Rect rcActualCross;
 };
 
 //

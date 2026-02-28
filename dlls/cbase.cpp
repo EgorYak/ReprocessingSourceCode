@@ -356,6 +356,11 @@ bool CBaseEntity::KeyValue(KeyValueData* pkvd)
 		m_iParent = ALLOC_STRING(pkvd->szValue);
 		return true;
 	}
+	else if (FStrEq(pkvd->szKeyName, "style"))
+	{
+		m_iStyle = atoi(pkvd->szValue);
+		return true;
+	}
 	else {
 		return false;
 	}

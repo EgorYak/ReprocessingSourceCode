@@ -1062,9 +1062,9 @@ void CMOFAssassin :: Precache()
 	PRECACHE_SOUND( "hgrunt/gr_mgun1.wav" );
 	PRECACHE_SOUND( "hgrunt/gr_mgun2.wav" );
 	
-	PRECACHE_SOUND( "hgrunt/gr_die1.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_die2.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_die3.wav" );
+	PRECACHE_SOUND( "ops/ma_die1.wav" );
+	PRECACHE_SOUND( "ops/ma_die2.wav" );
+	PRECACHE_SOUND( "ops/ma_die3.wav" );
 
 	PRECACHE_SOUND( "hgrunt/gr_reload1.wav" );
 
@@ -1177,13 +1177,13 @@ void CMOFAssassin :: DeathSound ()
 	switch ( RANDOM_LONG(0,2) )
 	{
 	case 0:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die1.wav", 1, ATTN_IDLE );	
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "ops/ma_die1.wav", 1, ATTN_IDLE );	
 		break;
 	case 1:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die2.wav", 1, ATTN_IDLE );	
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "ops/ma_die2.wav", 1, ATTN_IDLE );	
 		break;
 	case 2:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die3.wav", 1, ATTN_IDLE );	
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "ops/ma_die3.wav", 1, ATTN_IDLE );	
 		break;
 	}
 }

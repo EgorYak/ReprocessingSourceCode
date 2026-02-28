@@ -36,6 +36,11 @@ CHalfLifeRules::CHalfLifeRules()
 //=========================================================
 void CHalfLifeRules::Think()
 {
+	int iSkill;
+
+	iSkill = (int)CVAR_GET_FLOAT("skill");
+	if (iSkill != g_iSkillLevel)
+		RefreshSkillData();
 }
 
 //=========================================================

@@ -500,6 +500,12 @@ void CBarney::TalkInit()
 
 bool CBarney::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
+	if (FBitSet(pev->spawnflags, 8))
+	{
+		flDamage = 0;
+		CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+	}
+
 	// make sure friends talk about it if player hurts talkmonsters...
 	bool ret = CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 	if (!IsAlive() || pev->deadflag == DEAD_DYING)
@@ -1201,6 +1207,7 @@ void CDeadMonster::Spawn()
 
 	pev->framerate = 0.0;
 	pev->frame = m_iframe;
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 
 	//if (FBitSet(pev->spawnflags, 16))
 	//	pev->movetype = MOVETYPE_NOCLIP;

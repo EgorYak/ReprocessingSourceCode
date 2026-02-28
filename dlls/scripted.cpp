@@ -139,7 +139,7 @@ void CCineMonster::Spawn()
 		if (!FStringNull(pev->targetname))
 			m_startTime = gpGlobals->time + 1E6;
 	}
-	if ((pev->spawnflags & SF_SCRIPT_NOINTERRUPT) != 0)
+	if ((pev->spawnflags & SF_SCRIPT_NOINTERRUPT) != 0 || (pev->spawnflags & SF_SCRIPT_CONDNOINTERRUPT) != 0)
 		m_interruptable = false;
 	else
 		m_interruptable = true;
@@ -634,7 +634,7 @@ bool CBaseMonster::ExitScriptedSequence()
 
 void CCineMonster::AllowInterrupt(bool fAllow)
 {
-	if ((pev->spawnflags & SF_SCRIPT_NOINTERRUPT) != 0)
+	if ((pev->spawnflags & SF_SCRIPT_NOINTERRUPT) != 0 || (pev->spawnflags & SF_SCRIPT_CONDNOINTERRUPT) != 0 )
 		return;
 	m_interruptable = fAllow;
 }
@@ -658,6 +658,8 @@ int CCineMonster::IgnoreConditions()
 {
 	if (CanInterrupt())
 		return 0;
+	else if ((pev->spawnflags & SF_SCRIPT_CONDNOINTERRUPT) != 0)
+		return SCRIPT_BREAK_CONDITIONS_DONT_IGNORE_DAMAGE;
 	return SCRIPT_BREAK_CONDITIONS;
 }
 

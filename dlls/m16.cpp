@@ -146,20 +146,24 @@ void CM16::PrimaryAttack()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usM16, 0.0, g_vecZero, g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 0);
+	int recoil = (int)CVAR_GET_FLOAT("sk_adv_recoil");
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usM16, 0.0, g_vecZero, g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 1);
 
 	if (0 == m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", false, 0);
 
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack(1.0, 0.45, 0.28, 0.045, 3.75, 3.0, 7);
-	else if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
-		KickBack(1.2, 0.5, 0.23, 0.15, 5.5, 3.5, 6);
-	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		KickBack(0.6, 0.3, 0.2, 0.0125, 3.25, 2.0, 7);
-	else
-		KickBack(0.65, 0.35, 0.25, 0.015, 3.5, 2.25, 7);
+	if (recoil)
+	{
+		if (m_pPlayer->pev->velocity.Length2D() > 0)
+			KickBack(0.5, 0.45, 0.28, 0.045, 3.75, 3.0, 7);
+		else if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
+			KickBack(0.6, 0.5, 0.23, 0.15, 5.5, 3.5, 6);
+		else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
+			KickBack(0.3, 0.3, 0.2, 0.0125, 3.25, 2.0, 7);
+		else
+			KickBack(0.3, 0.35, 0.25, 0.015, 3.5, 2.25, 7);
+	}
 
 	if (m_iClip % 3 != 0)
 	{
@@ -171,7 +175,7 @@ void CM16::PrimaryAttack()
 	else
 	{
 		m_flNextPrimaryAttack = GetNextAttackDelay(0.5);
-
+		m_iShotsFired = 0;
 		if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
 	}

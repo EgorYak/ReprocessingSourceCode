@@ -169,7 +169,8 @@ void CHgun::PrimaryAttack()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0, 0);
+	int recoil = (int)CVAR_GET_FLOAT("sk_adv_recoil");
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usHornetFire, 0.0, g_vecZero, g_vecZero, 0.0, 0.0, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], 0, 0, 1);
 
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -178,14 +179,17 @@ void CHgun::PrimaryAttack()
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 
-	if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
-		KickBack(1.8, 0.65, 0.45, 0.125, 5.0, 3.5, 8);
-	else if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack(1.1, 0.5, 0.3, 0.06, 4.0, 3.0, 8);
-	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		KickBack(0.75, 0.325, 0.25, 0.025, 3.5, 2.5, 9);
-	else
-		KickBack(0.8, 0.35, 0.3, 0.03, 3.75, 3.0, 9);
+	if (recoil)
+	{
+		if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
+			KickBack(1.5, 0.65, 0.45, 0.125, 5.0, 3.5, 8);
+		else if (m_pPlayer->pev->velocity.Length2D() > 0)
+			KickBack(1.0, 0.5, 0.3, 0.06, 4.0, 3.0, 8);
+		else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
+			KickBack(0.35, 0.325, 0.25, 0.025, 3.5, 2.5, 9);
+		else
+			KickBack(0.5, 0.35, 0.3, 0.03, 3.75, 3.0, 9);
+	}
 
 	m_flNextPrimaryAttack = GetNextAttackDelay(0.12);
 
