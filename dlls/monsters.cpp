@@ -88,6 +88,8 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 		DEFINE_FIELD(CBaseMonster, m_IdealMonsterState, FIELD_INTEGER),
 		DEFINE_FIELD(CBaseMonster, m_iTaskStatus, FIELD_INTEGER),
 
+		DEFINE_FIELD(CBaseMonster, m_bScriptedDamage, FIELD_BOOLEAN),
+
 		//Schedule_t			*m_pSchedule;
 
 		DEFINE_FIELD(CBaseMonster, m_iScheduleIndex, FIELD_INTEGER),

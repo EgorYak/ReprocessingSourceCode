@@ -487,6 +487,7 @@ typedef struct
 } viewinterp_t;
 
 float m_flOfs;
+float m_flWallOfs;
 
 float m_flWeaponLag = 1.5f;
 
@@ -821,6 +822,62 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 
 	// Let the viewmodel shake at about 10% of the amplitude
 	gEngfuncs.V_ApplyShake(view->origin, view->angles, 0.9);
+
+	// lower viewmodel at the wall
+	if (view->model)
+	{
+		// Get eye position
+		Vector eyePos = ent->origin;
+		eyePos[2] += pparams->viewheight[2]; // Add view height
+
+		// Get view angles
+		Vector viewAngles;
+		gEngfuncs.GetViewAngles(viewAngles);
+
+		// Trace forward
+		Vector forward, endPos;
+		AngleVectors(viewAngles, forward, NULL, NULL);
+
+		float checkDistance = 64.0f; // Check up to 32 units ahead
+		VectorMA(eyePos, checkDistance, forward, endPos);
+
+		pmtrace_t tr;
+		gEngfuncs.pEventAPI->EV_SetTraceHull(2);
+		gEngfuncs.pEventAPI->EV_PlayerTrace(eyePos, endPos, PM_NORMAL, -1, &tr);
+
+		if (tr.fraction < 1.0f && tr.ent != ent->index)
+		{
+			float distToWall = tr.fraction * checkDistance;
+			float lowerScale = 1.0f - (distToWall / checkDistance);
+			lowerScale = V_max(0.0f, V_min(1.0f, lowerScale));
+			if (m_flWallOfs < 4.9f * lowerScale)
+				m_flWallOfs += 0.15f;
+			else if (m_flWallOfs > 5.15f * lowerScale)
+				m_flWallOfs -= 0.15f;
+			else
+				m_flWallOfs = (5.0f * lowerScale);
+		}
+		else
+		{
+			if (m_flWallOfs > 0.15)
+				m_flWallOfs -= 0.10f;
+			else
+				m_flWallOfs = 0;
+		}
+		for (int i = 0; i < 3; i++)
+		{
+			//view->origin[i] -= m_flWallOfs * pparams->right[i];
+			if (strcmp(view->model->name, "models/v_crowbar.mdl"))
+			{
+				view->origin[i] -= (m_flWallOfs * pparams->up[i]) * 0.5f;
+				view->origin[i] -= m_flWallOfs * pparams->forward[i];
+			}
+			else
+			{
+				view->origin[i] -= m_flWallOfs * pparams->up[i];
+			}
+		}
+	}
 
 	//for (i = 0; i < 3; i++)
 	//{

@@ -108,6 +108,8 @@ public:
 	SCRIPTSTATE m_scriptState; // internal cinematic state
 	CCineMonster* m_pCine;
 
+	bool m_bScriptedDamage = false;
+
 	float m_flLastYawTime;
 
 	bool m_AllowItemDropping = true;

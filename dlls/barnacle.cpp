@@ -39,6 +39,7 @@ public:
 	CBaseEntity* TongueTouchEnt(float* pflLength);
 	int Classify() override;
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
+	int IRelationship(CBaseEntity *pTarget) override;
 	void EXPORT BarnacleThink();
 	void EXPORT WaitTillDead();
 	void Killed(entvars_t* pevAttacker, int iGib) override;
@@ -396,6 +397,22 @@ void CBarnacle::Precache()
 	PRECACHE_SOUND("barnacle/bcl_chew3.wav");
 	PRECACHE_SOUND("barnacle/bcl_die1.wav");
 	PRECACHE_SOUND("barnacle/bcl_die3.wav");
+}
+
+int CBarnacle::IRelationship(CBaseEntity *pTarget)
+{
+	//Always mark pit drones as allies
+	if (
+		FClassnameIs(pTarget->pev, "monster_zombie") || FClassnameIs(pTarget->pev, "monster_headcrab") ||
+		FClassnameIs(pTarget->pev, "monster_bigcrab") || FClassnameIs(pTarget->pev, "monster_babycrab") || 
+		FClassnameIs(pTarget->pev, "monster_zombie_barney") || FClassnameIs(pTarget->pev, "monster_zombie_soldier") || 
+		FClassnameIs(pTarget->pev, "monster_zombie_grunt")
+		)
+	{
+		return R_HT;
+	}
+
+	return CBaseMonster::IRelationship(pTarget);
 }
 
 //=========================================================

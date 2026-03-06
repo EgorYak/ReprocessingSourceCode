@@ -54,9 +54,21 @@ public:
 	void Spawn() override;
 	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
 
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+
+	static TYPEDESCRIPTION m_SaveData[];
+
 	// Bmodels don't go across transitions
 	int ObjectCaps() override { return CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 };
+
+// Global Savedata for Toggle
+TYPEDESCRIPTION CFuncWall::m_SaveData[] =
+{
+	DEFINE_FIELD(CFuncWall, m_iStyle, FIELD_INTEGER),
+};
+IMPLEMENT_SAVERESTORE(CFuncWall, CBaseEntity);
 
 LINK_ENTITY_TO_CLASS(func_wall, CFuncWall);
 
@@ -133,6 +145,7 @@ LINK_ENTITY_TO_CLASS(func_wall_toggle, CFuncWallToggle);
 void CFuncWallToggle::Spawn()
 {
 	CFuncWall::Spawn();
+	if (m_iStyle != 0) LIGHT_STYLE(m_iStyle, "m");
 	if ((pev->spawnflags & SF_WALL_START_OFF) != 0)
 		TurnOff();
 }
@@ -143,6 +156,10 @@ void CFuncWallToggle::TurnOff()
 	pev->solid = SOLID_NOT;
 	pev->effects |= EF_NODRAW;
 	UTIL_SetOrigin(pev, pev->origin);
+	if (m_iStyle != 0)
+	{
+		LIGHT_STYLE(m_iStyle, "a");
+	}
 }
 
 
@@ -151,6 +168,10 @@ void CFuncWallToggle::TurnOn()
 	pev->solid = SOLID_BSP;
 	pev->effects &= ~EF_NODRAW;
 	UTIL_SetOrigin(pev, pev->origin);
+	if (m_iStyle != 0)
+	{
+		LIGHT_STYLE(m_iStyle, "m");
+	}
 }
 
 

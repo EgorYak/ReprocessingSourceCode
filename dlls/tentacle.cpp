@@ -355,7 +355,11 @@ int CTentacle::Level(float dz)
 {
 	if (dz < 216)
 		return 0;
+	if ((pev->spawnflags & SF_TENT_ONE_FLOOR) != 0 && m_iTapSound == TE_DIRT)
+		return 0;
 	if (dz < 408)
+		return 1;
+	if ((pev->spawnflags & SF_TENT_ONE_FLOOR) != 0)
 		return 1;
 	if (dz < 600)
 		return 2;
@@ -531,7 +535,7 @@ void CTentacle::Cycle()
 				break;
 			}
 
-			// UTIL_EmitAmbientSound(ENT(pev), pev->origin + Vector( 0, 0, MyHeight()), sound, 1.0, ATTN_NORM, 0, 100);
+			UTIL_EmitAmbientSound(ENT(pev), pev->origin + Vector( 0, 0, MyHeight()), sound, 1.0, ATTN_NORM, 0, 100);
 		}
 		m_flSoundTime = gpGlobals->time + RANDOM_FLOAT(5.0, 10.0);
 	}

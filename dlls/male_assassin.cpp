@@ -2653,3 +2653,60 @@ void CFassassin::RunAI(void)
 			pev->rendermode = kRenderNormal;
 	}
 }
+
+//=========================================================
+// CMOFAssassinRepel - when triggered, spawns a monster_male_assassin
+// repelling down a line.
+//=========================================================
+
+class CFassassinRepel : public CBaseMonster
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	void EXPORT RepelUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	int m_iSpriteTexture;	// Don't save, precache
+};
+
+LINK_ENTITY_TO_CLASS(monster_fassassin_repel, CFassassinRepel);
+
+void CFassassinRepel::Spawn()
+{
+	Precache();
+	pev->solid = SOLID_NOT;
+
+	SetUse(&CFassassinRepel::RepelUse);
+}
+
+void CFassassinRepel::Precache()
+{
+	UTIL_PrecacheOther("monster_female_assassin");
+	m_iSpriteTexture = PRECACHE_MODEL("sprites/rope.spr");
+}
+
+void CFassassinRepel::RepelUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
+{
+	TraceResult tr;
+	UTIL_TraceLine(pev->origin, pev->origin + Vector(0, 0, -4096.0), dont_ignore_monsters, ENT(pev), &tr);
+	/*
+	if ( tr.pHit && Instance( tr.pHit )->pev->solid != SOLID_BSP)
+		return NULL;
+	*/
+
+	CBaseEntity *pEntity = Create("monster_female_assassin", pev->origin, pev->angles);
+	CBaseMonster *pGrunt = pEntity->MyMonsterPointer();
+	pGrunt->pev->movetype = MOVETYPE_FLY;
+	pGrunt->pev->velocity = Vector(0, 0, RANDOM_FLOAT(-196, -128));
+	pGrunt->SetActivity(ACT_GLIDE);
+	// UNDONE: position?
+	pGrunt->m_vecLastPosition = tr.vecEndPos;
+
+	CBeam *pBeam = CBeam::BeamCreate("sprites/rope.spr", 10);
+	pBeam->PointEntInit(pev->origin + Vector(0, 0, 112), pGrunt->entindex());
+	pBeam->SetFlags(BEAM_FSOLID);
+	pBeam->SetColor(255, 255, 255);
+	pBeam->SetThink(&CBeam::SUB_Remove);
+	pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
+
+	UTIL_Remove(this);
+}
