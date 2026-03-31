@@ -883,7 +883,8 @@ bool CBaseMonster::CineCleanup()
 
 		// We should have some animation to put these guys in, but for now it's idle.
 		// Due to NOINTERP above, there won't be any blending between this anim & the sequence
-		m_Activity = ACT_RESET;
+		if (!FBitSet(pOldCine->pev->spawnflags, SF_SCRIPT_NORESETENTITY))
+			m_Activity = ACT_RESET;
 	}
 	// set them back into a normal state
 	pev->enemy = NULL;
@@ -899,6 +900,23 @@ bool CBaseMonster::CineCleanup()
 		FCheckAITrigger();
 		pev->deadflag = DEAD_NO;
 	}
+
+	/*
+	if ((pev->spawnflags & SF_SCRIPT_LOOP_ACTION) != 0)
+	{
+		pev->sequence = LookupSequence(STRING(pOldCine->m_iszPlay));
+		m_IdealMonsterState = MONSTERSTATE_SCRIPT;
+		if (pev->sequence == -1)
+		{
+			ALERT(at_error, "%s: unknown scripted sequence \"%s\"\n", STRING(pOldCine->pev->targetname), STRING(pOldCine->m_iszPlay));
+			pev->sequence = 0;
+			// return false;
+		}
+
+		pev->frame = 0;
+		ResetSequenceInfo();
+	}
+	*/
 
 
 	//	SetAnimation( m_MonsterState );

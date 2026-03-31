@@ -378,6 +378,7 @@ void CHud::Init()
 	CVAR_CREATE("hud_takesshots", "0", FCVAR_ARCHIVE);					   // controls whether or not to automatically take screenshots at the end of a round
 	cl_gunsmoke = gEngfuncs.pfnRegisterVariable("cl_gunsmoke", "1", FCVAR_ARCHIVE);
 
+	m_bRadio = false;
 	m_iLogo = 0;
 	m_iFOV = 0;
 	m_iNumCards = 0;

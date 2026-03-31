@@ -56,6 +56,7 @@ public:
 	int m_HUD_dmg_bio;
 	int m_HUD_cross;
 	int m_HUD_card;
+	int m_HUD_radio;
 	float m_fAttackFront, m_fAttackRear, m_fAttackLeft, m_fAttackRight;
 	void GetPainColor(int& r, int& g, int& b);
 	float m_fFade;

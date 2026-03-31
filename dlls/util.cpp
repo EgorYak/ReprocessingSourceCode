@@ -995,7 +995,7 @@ void UTIL_ShowMessagePVS(const char *pString, const Vector &org)
 				if (pPlayer && pPlayer->IsNetClient())
 				{
 						float flDist = (pPlayer->pev->origin - org).Length();
-						if (flDist > 300)
+						if (flDist > 2000)
 							continue;
 						//	MESSAGE_BEGIN( MSG_ONE, gmsgHudText, NULL, pEntity->edict() );
 						MESSAGE_BEGIN(MSG_PVS, gmsgCaption, org);

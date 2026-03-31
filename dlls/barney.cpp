@@ -926,9 +926,18 @@ public:
 	void Precache() override;
 	int Classify() override;
 	void AgentFirePistol();
+	bool FOkToSpeak();
 	void HandleAnimEvent(MonsterEvent_t* pEvent);
+	int ObjectCaps() override { return CTalkMonster::ObjectCaps(); }
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 	void Killed(entvars_t* pevAttacker, int iGib) override;
+
+	void AlertSound() override;
+	void DeathSound() override;
+	void PainSound() override {};
+	Schedule_t* GetSchedule() override;
+
+	void TalkInit();
 };
 
 LINK_ENTITY_TO_CLASS(monster_evil_barney, CEvilBarney);
@@ -986,18 +995,107 @@ void CEvilBarney::Precache()
 	PRECACHE_SOUND("barney/ba_attack1.wav");
 	PRECACHE_SOUND("barney/ba_attack2.wav");
 
-	PRECACHE_SOUND("barney/ba_pain1.wav");
-	PRECACHE_SOUND("barney/ba_pain2.wav");
-	PRECACHE_SOUND("barney/ba_pain3.wav");
+	//PRECACHE_SOUND("barney/ba_pain1.wav");
+	//PRECACHE_SOUND("barney/ba_pain2.wav");
+	//PRECACHE_SOUND("barney/ba_pain3.wav");
 
-	PRECACHE_SOUND("barney/ba_die1.wav");
-	PRECACHE_SOUND("barney/ba_die2.wav");
-	PRECACHE_SOUND("barney/ba_die3.wav");
+	PRECACHE_SOUND("evilguards/die1.wav");
+	PRECACHE_SOUND("evilguards/die2.wav");
+	PRECACHE_SOUND("evilguards/die3.wav");
+	PRECACHE_SOUND("evilguards/die4.wav");
 
 	// every new barney must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
 	TalkInit();
 	CTalkMonster::Precache();
+}
+
+// Init talk data
+void CEvilBarney::TalkInit()
+{
+
+	CTalkMonster::TalkInit();
+
+	// scientists speach group names (group names are in sentences.txt)
+
+	m_szGrp[TLK_ANSWER] = "EB_IDLE";//"BA_ANSWER";
+	m_szGrp[TLK_QUESTION] = "EB_IDLE";//"BA_QUESTION";
+	m_szGrp[TLK_IDLE] = "EB_IDLE";
+	m_szGrp[TLK_STARE] = "BA_STARE";
+	m_szGrp[TLK_USE] = "BA_OK";
+	m_szGrp[TLK_UNUSE] = "BA_WAIT";
+	m_szGrp[TLK_STOP] = "BA_STOP";
+
+	m_szGrp[TLK_NOSHOOT] = "EB_SCARED";
+	m_szGrp[TLK_HELLO] = "BA_HELLO";
+
+	m_szGrp[TLK_PLHURT1] = "!BA_CUREA";
+	m_szGrp[TLK_PLHURT2] = "!BA_CUREB";
+	m_szGrp[TLK_PLHURT3] = "!BA_CUREC";
+
+	m_szGrp[TLK_PHELLO] = NULL;			  //"BA_PHELLO";		// UNDONE
+	m_szGrp[TLK_PIDLE] = NULL;			  //"BA_PIDLE";			// UNDONE
+	m_szGrp[TLK_PQUESTION] = "BA_PQUEST"; // UNDONE
+
+	m_szGrp[TLK_SMELL] = "EB_SMELL";
+
+	m_szGrp[TLK_WOUND] = "BA_WOUND";
+	m_szGrp[TLK_MORTAL] = "BA_MORTAL";
+
+	// get voice for head - just one barney voice for now
+	m_voicePitch = 100;
+}
+
+//=========================================================
+// ALertSound - barney says "Freeze!"
+//=========================================================
+void CEvilBarney::AlertSound()
+{
+	if (m_hEnemy != NULL)
+	{
+		if (FOkToSpeak())
+		{
+			PlaySentence("EB_ATTACK", RANDOM_FLOAT(2.8, 3.2), VOL_NORM, ATTN_IDLE);
+		}
+	}
+}
+
+//=========================================================
+// DeathSound
+//=========================================================
+void CEvilBarney::DeathSound()
+{
+	switch (RANDOM_LONG(0, 3))
+	{
+	case 0:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die1.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 1:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die2.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 2:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die3.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 3:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die4.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	}
+}
+
+//=========================================================
+// GetSchedule - Decides which type of schedule best suits
+// the monster's current state and conditions. Then calls
+// monster's member function to get a pointer to a schedule
+// of the proper type.
+//=========================================================
+Schedule_t* CEvilBarney::GetSchedule()
+{
+	if (HasConditions(bits_COND_ENEMY_DEAD) && FOkToSpeak())
+	{
+		PlaySentence("EB_KILL", 4, VOL_NORM, ATTN_NORM);
+	}
+
+	return CBarney::GetSchedule();
 }
 
 //=========================================================
@@ -1033,7 +1131,7 @@ void CEvilBarney::HandleAnimEvent(MonsterEvent_t* pEvent)
 		break;
 
 	default:
-		CTalkMonster::HandleAnimEvent(pEvent);
+		CBarney::HandleAnimEvent(pEvent);
 	}
 }
 
@@ -1097,7 +1195,40 @@ bool CEvilBarney::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, fl
 	// make sure friends talk about it if player hurts talkmonsters...
 	bool ret = CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 
+	if (pev->deadflag == DEAD_NO && FOkToSpeak())
+	{
+		PlaySentence("EB_MAD", 4, VOL_NORM, ATTN_NORM);
+	}
+
 	return ret;
+}
+
+bool CEvilBarney::FOkToSpeak()
+{
+	// if in the grip of a barnacle, don't speak
+	if (m_MonsterState == MONSTERSTATE_PRONE || m_IdealMonsterState == MONSTERSTATE_PRONE)
+	{
+		return false;
+	}
+
+	// if not alive, certainly don't speak
+	if (pev->deadflag != DEAD_NO)
+	{
+		return false;
+	}
+
+	// if someone else is talking, don't speak
+	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
+		return false;
+
+	if ((pev->spawnflags & SF_MONSTER_GAG) != 0)
+		return false;
+
+	// if player is not in pvs, don't speak
+	if (!IsAlive() || FNullEnt(FIND_CLIENT_IN_PVS(edict())))
+		return false;
+
+	return true;
 }
 
 //=========================================================

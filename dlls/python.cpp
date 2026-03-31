@@ -239,7 +239,15 @@ void CPython::Reload()
 #endif
 
 #ifndef CLIENT_DLL
-	if (DefaultReload(7, PYTHON_RELOAD, 2.2, bUseScope ? 1 : 0))
+
+	bool iResult;
+
+	if (m_iClip == 0)
+		iResult = DefaultReload(7, PYTHON_RELOAD_E, 2.2, bUseScope ? 1 : 0);
+	else
+		iResult = DefaultReload(7, PYTHON_RELOAD, 2.2, bUseScope ? 1 : 0);
+
+	if (iResult)
 	{
 		if (m_pSpot && m_fSpotActive)
 		{

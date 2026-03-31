@@ -1171,3 +1171,220 @@ Schedule_t* CAGrunt::GetScheduleOfType(int Type)
 	return CSquadMonster::GetScheduleOfType(Type);
 }
 
+
+
+class CACommander : public CAGrunt
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
+};
+LINK_ENTITY_TO_CLASS(monster_alien_commander, CACommander);
+
+//=========================================================
+// Spawn
+//=========================================================
+void CACommander::Spawn()
+{
+	Precache();
+	if (pev->model)
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/AgruntB.mdl");
+	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
+
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_STEP;
+	m_bloodColor = BLOOD_COLOR_GREEN;
+	pev->effects = 0;
+	pev->health = gSkillData.agruntHealth;
+	m_flFieldOfView = 0.3; // indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_MonsterState = MONSTERSTATE_NONE;
+	m_afCapability = 0;
+	m_afCapability |= bits_CAP_SQUAD;
+
+	m_HackedGunPos = Vector(24, 64, 48);
+
+	m_flNextSpeakTime = m_flNextWordTime = gpGlobals->time + 10 + RANDOM_LONG(0, 10);
+
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CACommander::Precache()
+{
+	if (pev->model)
+		PRECACHE_MODEL((char*)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/AgruntB.mdl");
+
+	PRECACHE_SOUND_ARRAY(pAttackHitSounds);
+	PRECACHE_SOUND_ARRAY(pAttackMissSounds);
+	PRECACHE_SOUND_ARRAY(pIdleSounds);
+	PRECACHE_SOUND_ARRAY(pDieSounds);
+	PRECACHE_SOUND_ARRAY(pPainSounds);
+	PRECACHE_SOUND_ARRAY(pAttackSounds);
+	PRECACHE_SOUND_ARRAY(pAlertSounds);
+
+	PRECACHE_SOUND("hassault/hw_shoot1.wav");
+
+	iAgruntMuzzleFlash = PRECACHE_MODEL("sprites/muz4.spr");
+
+	UTIL_PrecacheOther("hornet");
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//
+// Returns number of events handled, 0 if none.
+//=========================================================
+void CACommander::HandleAnimEvent(MonsterEvent_t* pEvent)
+{
+	switch (pEvent->event)
+	{
+	case AGRUNT_AE_HORNET1:
+	case AGRUNT_AE_HORNET2:
+	case AGRUNT_AE_HORNET3:
+	case AGRUNT_AE_HORNET4:
+	case AGRUNT_AE_HORNET5:
+	{
+		// m_vecEnemyLKP should be center of enemy body
+		Vector vecArmPos, vecArmDir;
+		Vector vecDirToEnemy;
+		Vector angDir;
+
+		if (HasConditions(bits_COND_SEE_ENEMY))
+		{
+			vecDirToEnemy = ((m_vecEnemyLKP)-pev->origin);
+			angDir = UTIL_VecToAngles(vecDirToEnemy);
+			vecDirToEnemy = vecDirToEnemy.Normalize();
+		}
+		else
+		{
+			angDir = pev->angles;
+			UTIL_MakeAimVectors(angDir);
+			vecDirToEnemy = gpGlobals->v_forward;
+		}
+
+		pev->effects = EF_MUZZLEFLASH;
+
+		// make angles +-180
+		if (angDir.x > 180)
+		{
+			angDir.x = angDir.x - 360;
+		}
+
+		SetBlending(0, angDir.x);
+		GetAttachment(0, vecArmPos, vecArmDir);
+
+		vecArmPos = vecArmPos + vecDirToEnemy * 32;
+		MESSAGE_BEGIN(MSG_PVS, SVC_TEMPENTITY, vecArmPos);
+		WRITE_BYTE(TE_SPRITE);
+		WRITE_COORD(vecArmPos.x); // pos
+		WRITE_COORD(vecArmPos.y);
+		WRITE_COORD(vecArmPos.z);
+		WRITE_SHORT(iAgruntMuzzleFlash); // model
+		WRITE_BYTE(6);					 // size * 10
+		WRITE_BYTE(128);				 // brightness
+		MESSAGE_END();
+
+		CBaseEntity* pHornet = CBaseEntity::Create("hornet", vecArmPos, UTIL_VecToAngles(vecDirToEnemy), edict());
+		UTIL_MakeVectors(pHornet->pev->angles);
+		pHornet->pev->velocity = gpGlobals->v_forward * 700;
+
+
+
+		switch (RANDOM_LONG(0, 2))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "agrunt/ag_fire1.wav", 1.0, ATTN_NORM, 0, 100);
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "agrunt/ag_fire2.wav", 1.0, ATTN_NORM, 0, 100);
+			break;
+		case 2:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "agrunt/ag_fire3.wav", 1.0, ATTN_NORM, 0, 100);
+			break;
+		}
+
+		/*
+		CBaseMonster* pHornetMonster = pHornet->MyMonsterPointer();
+
+		if (pHornetMonster)
+		{
+			pHornetMonster->m_hEnemy = m_hEnemy;
+		}
+		*/
+	}
+	break;
+
+	case AGRUNT_AE_LEFT_PUNCH:
+	{
+		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB);
+
+		if (pHurt)
+		{
+			pHurt->pev->punchangle.y = -25;
+			pHurt->pev->punchangle.x = 8;
+
+			// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+			if (pHurt->IsPlayer())
+			{
+				// this is a player. Knock him around.
+				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 250;
+			}
+
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pAttackHitSounds), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5, 5));
+
+			Vector vecArmPos, vecArmAng;
+			GetAttachment(0, vecArmPos, vecArmAng);
+			SpawnBlood(vecArmPos, pHurt->BloodColor(), 25); // a little surface blood.
+		}
+		else
+		{
+			// Play a random attack miss sound
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pAttackMissSounds), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5, 5));
+		}
+	}
+	break;
+
+	case AGRUNT_AE_RIGHT_PUNCH:
+	{
+		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB);
+
+		if (pHurt)
+		{
+			pHurt->pev->punchangle.y = 25;
+			pHurt->pev->punchangle.x = 8;
+
+			// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+			if (pHurt->IsPlayer())
+			{
+				// this is a player. Knock him around.
+				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * -250;
+			}
+
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pAttackHitSounds), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5, 5));
+
+			Vector vecArmPos, vecArmAng;
+			GetAttachment(0, vecArmPos, vecArmAng);
+			SpawnBlood(vecArmPos, pHurt->BloodColor(), 25); // a little surface blood.
+		}
+		else
+		{
+			// Play a random attack miss sound
+			EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pAttackMissSounds), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5, 5));
+		}
+	}
+	break;
+
+	default:
+		CAGrunt::HandleAnimEvent(pEvent);
+		break;
+	}
+}

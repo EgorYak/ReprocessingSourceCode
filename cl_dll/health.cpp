@@ -94,6 +94,8 @@ bool CHudHealth::VidInit()
 
 	m_HUD_card = gHUD.GetSpriteIndex("item_security");
 
+	m_HUD_radio = gHUD.GetSpriteIndex("icon_radio");
+
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
 	return true;
@@ -252,6 +254,16 @@ bool CHudHealth::Draw(float flTime)
 
 				gHUD.DrawHudNumberReverse(x, y, gHUD.m_iNumCards, DHN_DRAWZERO, r, g, b);
 			}
+		}
+
+		if (gHUD.m_bRadio)
+		{
+			UnpackRGB(r, g, b, RGB_YELLOWISH);
+			y = gHUD.m_iFontHeight;
+			x = CrossWidth / 2;
+
+			SPR_Set(gHUD.GetSprite(m_HUD_radio), r, g, b);
+			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_radio));
 		}
 	}
 

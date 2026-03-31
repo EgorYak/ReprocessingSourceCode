@@ -2736,6 +2736,8 @@ public:
 	void Spawn() override;
 	void Precache() override;
 	int Classify() { return CLASS_ALIEN_MILITARY; };
+	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
+	void GibMonster() override;
 };
 
 LINK_ENTITY_TO_CLASS(monster_nam_grunt, CNamGrunt);
@@ -2856,9 +2858,9 @@ void CNamGrunt::Precache()
 
 	// get voice pitch
 	if (RANDOM_LONG(0, 1))
-		m_voicePitch = 109 + RANDOM_LONG(0, 7);
+		m_voicePitch = 50 + RANDOM_LONG(0, 10);
 	else
-		m_voicePitch = 100;
+		m_voicePitch = 55;
 
 	PRECACHE_MODEL("models/rpgrocket.mdl");
 	PRECACHE_MODEL("sprites/smoke.spr");
@@ -2867,4 +2869,86 @@ void CNamGrunt::Precache()
 	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 	m_iRifleShell = PRECACHE_MODEL("models/556shell.mdl"); // brass shell
 	m_iShotgunShell = PRECACHE_MODEL("models/shotgunshell.mdl");
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//=========================================================
+void CNamGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
+{
+	Vector vecShootDir;
+	Vector vecShootOrigin;
+
+	switch (pEvent->event)
+	{
+	case HGRUNT_AE_DROP_GUN:
+	{
+	}
+	break;
+
+	case HGRUNT_AE_BURST1:
+	{
+		if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
+		{
+			ShootM16();
+
+			// the first round of the three round burst plays the sound and puts a sound in the world sound list.
+			if (RANDOM_LONG(0, 1))
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/m161.wav", 1, ATTN_NORM);
+			}
+			else
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/m162.wav", 1, ATTN_NORM);
+			}
+		}
+		else if (FBitSet(pev->weapons, HGRUNT_9MMAR))
+		{
+			Shoot();
+
+			// the first round of the three round burst plays the sound and puts a sound in the world sound list.
+			if (RANDOM_LONG(0, 1))
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, ATTN_NORM);
+			}
+			else
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, ATTN_NORM);
+			}
+		}
+		else if (FBitSet(pev->weapons, HGRUNT_RPG))
+		{
+			RPG();
+
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/rocketfire1.wav", 1, ATTN_NORM);
+		}
+		else
+		{
+			Shotgun();
+
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sbarrel1.wav", 1, ATTN_NORM);
+		}
+
+		CSoundEnt::InsertSound(bits_SOUND_COMBAT, pev->origin, 384, 0.3);
+	}
+	break;
+
+	case HGRUNT_AE_BURST2:
+	case HGRUNT_AE_BURST3:
+		Shoot();
+		break;
+
+	default:
+		CHGrunt::HandleAnimEvent(pEvent);
+		break;
+	}
+}
+
+//=========================================================
+// GibMonster - make gun fly through the air.
+//=========================================================
+void CNamGrunt::GibMonster()
+{
+	CBaseMonster::GibMonster();
 }

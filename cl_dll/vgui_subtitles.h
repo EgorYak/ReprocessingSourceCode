@@ -23,6 +23,7 @@ public:
 
 	float m_fBirthTime;
 	float m_fHoldTime;
+	bool m_bRadio;
 //	int bkalpha;
 	client_textmessage_t *msgAfterDeath;
 };

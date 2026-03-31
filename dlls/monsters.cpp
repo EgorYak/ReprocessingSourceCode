@@ -1403,6 +1403,11 @@ bool CBaseMonster::PopEnemy()
 //=========================================================
 void CBaseMonster::SetActivity(Activity NewActivity)
 {
+	// If I'm already doing the NewActivity I can bail.
+	if (m_Activity == NewActivity)
+	{
+		return;
+	}
 	const Activity oldActivity = NewActivity;
 
 	m_Activity = NewActivity; // Go ahead and set this so it doesn't keep trying when the anim is not present

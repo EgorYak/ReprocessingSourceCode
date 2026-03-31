@@ -185,6 +185,12 @@ void CSubtitle::AddMessage( client_textmessage_t *msg )
 	text->setSize( getWide(), th );
 	text->m_fHoldTime = holdtime;
 
+	int radio = msg->effect;
+	if (radio == 1)
+		text->m_bRadio = true;
+	else
+		text->m_bRadio = false;
+
 	if (!isVisible())
 	{
 		layerpos = getTall()-th;
@@ -227,6 +233,9 @@ void CSubtitle::paintBackground()
 	{
 		if (m_fCurStartTime + m_pCur->m_fHoldTime <= curtime)
 		{
+			if (m_pCur->m_bRadio)
+				gHUD.m_bRadio = false;
+
 			m_fCurStartTime = curtime;
 			client_textmessage_t *newmsg = m_pCur->msgAfterDeath;
 			m_pLayer->removeChild(m_pCur);
@@ -262,8 +271,8 @@ void CSubtitle::paintBackground()
 				{
 					layerpos = getTall() - m_pCur->getTall();
 					m_pLayer->setBounds(0, layerpos, getWide(), m_pCur->getTall());
-					m_pCur->setPos(0,0);
-					m_pCur->m_fBirthTime = curtime;					
+					m_pCur->setPos(0, 0);
+					m_pCur->m_fBirthTime = curtime;
 					m_pCur->setVisible(true);
 
 					m_pWait = NULL;
@@ -277,7 +286,7 @@ void CSubtitle::paintBackground()
 							m_pWait->setPos(0, lt);
 							break;
 						}
-					}					
+					}
 				}
 				else
 				{
@@ -287,6 +296,8 @@ void CSubtitle::paintBackground()
 				}
 			}
 		}
+		else if (m_pCur->m_bRadio)
+			gHUD.m_bRadio = true;
 	}
 
 	if (m_pWait)

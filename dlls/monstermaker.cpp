@@ -222,6 +222,9 @@ void CMonsterMaker::MakeMonster()
 		// if I have a netname (overloaded), give the child monster that name as a targetname
 		pevCreate->targetname = pev->netname;
 	}
+	CBaseMonster* createdmon = GetMonsterPointer(ENT(pevCreate));
+	createdmon->m_iTriggerCondition = m_iTriggerCondition;
+	createdmon->m_iszTriggerTarget = m_iszTriggerTarget;
 
 	m_cLiveChildren++; // count this monster
 	m_cNumMonsters--;

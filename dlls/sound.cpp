@@ -1420,9 +1420,9 @@ void EMIT_SOUND_DYN(edict_t* entity, int channel, const char* sample, float volu
 			EMIT_SOUND_DYN2(entity, channel, name, volume, attenuation, flags, pitch);
 		else
 			ALERT(at_aiconsole, "Unable to find %s in sentences.txt\n", sample);
-			// buz: send sencences as text messages to lookup subtitles in titles.txt
-			//	UTIL_ShowMessageAll( sample );
-			UTIL_ShowMessagePVS(sample, entity->v.origin);
+		// buz: send sencences as text messages to lookup subtitles in titles.txt
+		//	UTIL_ShowMessageAll( sample );
+		UTIL_ShowMessagePVS(sample, entity->v.origin);
 	}
 	else
 		EMIT_SOUND_DYN2(entity, channel, sample, volume, attenuation, flags, pitch);
