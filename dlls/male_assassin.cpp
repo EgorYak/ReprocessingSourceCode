@@ -334,7 +334,7 @@ void CMOFAssassin :: GibMonster ()
 			pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
 			pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
 		}
-	
+		/*
 		if (FBitSet( pev->weapons, MAssassinWeaponFlag::GrenadeLauncher ))
 		{
 			pGun = DropItem( "weapon_handgrenade", vecGunPos, vecGunAngles );
@@ -344,6 +344,7 @@ void CMOFAssassin :: GibMonster ()
 				pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
 			}
 		}
+		*/
 	}
 
 	CBaseMonster :: GibMonster();
@@ -881,10 +882,12 @@ void CMOFAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				 DropItem( "weapon_crossbow", vecGunPos, vecGunAngles );
 			}
+			/*
 			if (FBitSet( pev->weapons, MAssassinWeaponFlag::GrenadeLauncher ))
 			{
 				DropItem( "weapon_handgrenade", vecGunPos, vecGunAngles );
 			}
+			*/
 
 			}
 			break;

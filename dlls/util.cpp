@@ -654,7 +654,8 @@ void UTIL_EmitAmbientSound(edict_t* entity, const Vector& vecOrigin, const char*
 		if (SENTENCEG_Lookup(samp, name) >= 0)
 		{
 			EMIT_AMBIENT_SOUND(entity, rgfl, name, vol, attenuation, fFlags, pitch);
-			UTIL_ShowMessagePVS(samp, vecOrigin);
+			if ((fFlags & SND_STOP) == 0)
+				UTIL_ShowMessagePVS(samp, vecOrigin);
 		}
 	}
 	else
@@ -995,7 +996,7 @@ void UTIL_ShowMessagePVS(const char *pString, const Vector &org)
 				if (pPlayer && pPlayer->IsNetClient())
 				{
 						float flDist = (pPlayer->pev->origin - org).Length();
-						if (flDist > 2000)
+						if (flDist > 500)
 							continue;
 						//	MESSAGE_BEGIN( MSG_ONE, gmsgHudText, NULL, pEntity->edict() );
 						MESSAGE_BEGIN(MSG_PVS, gmsgCaption, org);

@@ -85,24 +85,10 @@ void CNamBullet::Spawn()
 	pev->rendermode = kRenderTransAlpha;
 	pev->renderamt = 255;
 
-	//TODO: probably shouldn't be assinging to x every time
-	if( g_Language == LANGUAGE_GERMAN )
-	{
-		SET_MODEL( edict(), "sprites/bigspit.spr" );
-		pev->rendercolor.x = 0;
-		pev->rendercolor.x = 255;
-		pev->rendercolor.x = 0;
-	}
-	else
-	{
-		SET_MODEL( edict(), "sprites/bigspit.spr" );
-		pev->rendercolor.x = 128;
-		pev->rendercolor.x = 32;
-		pev->rendercolor.x = 128;
-	}
+	SET_MODEL( edict(), "models/bullet.mdl" );
 
 	pev->frame = 0;
-	pev->scale = 0.5;
+	//pev->scale = 0.5;
 
 	UTIL_SetSize( pev, g_vecZero, g_vecZero );
 
@@ -350,16 +336,44 @@ bool CNamCharlie :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 
 void CNamCharlie :: PainSound()
 {
+	switch (RANDOM_LONG(0, 1))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert1.wav", 1, ATTN_IDLE);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert2.wav", 1, ATTN_IDLE);
+		break;
+	}
 }
 
 void CNamCharlie :: AlertSound()
 {
-
+	switch (RANDOM_LONG(0, 1))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert1.wav", 1, ATTN_IDLE);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert2.wav", 1, ATTN_IDLE);
+		break;
+	}
 }
 
 void CNamCharlie :: IdleSound()
 {
-
+	switch (RANDOM_LONG(0, 2))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle1.wav", 1, ATTN_IDLE);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle2.wav", 1, ATTN_IDLE);
+		break;
+	case 2:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle3.wav", 1, ATTN_IDLE);
+		break;
+	}
 }
 
 void CNamCharlie::DeathSound()
@@ -433,7 +447,15 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				//Note: this check wasn't in the original. If an enemy dies during gut throw windup, this can be null and crash
 				if( m_hEnemy )
 				{
-					EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/m161.wav", 1, ATTN_NORM);
+					switch (RANDOM_LONG(0, 1))
+					{
+					case 0:
+						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+						break;
+					case 1:
+						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
+						break;
+					}
 					Vector vecGutsPos, vecGutsAngles;
 					GetAttachment( 0, vecGutsPos, vecGutsAngles );
 					Vector vecShootOrigin = GetGunPosition();
@@ -578,7 +600,7 @@ void CNamCharlie :: Precache()
 	int i;
 
 	PRECACHE_MODEL("models/charlie.mdl");
-	PRECACHE_MODEL( "sprites/bigspit.spr" );
+	PRECACHE_MODEL( "models/bullet.mdl" );
 
 	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
@@ -589,9 +611,18 @@ void CNamCharlie :: Precache()
 	PRECACHE_SOUND( "gook/die1.wav" );
 	PRECACHE_SOUND( "gook/die2.wav" );
 	PRECACHE_SOUND( "gook/die3.wav" );
+
+	PRECACHE_SOUND("gook/alert1.wav");
+	PRECACHE_SOUND("gook/alert2.wav");
+
+	PRECACHE_SOUND("gook/idle1.wav");
+	PRECACHE_SOUND("gook/idle2.wav");
+	PRECACHE_SOUND("gook/idle3.wav");
+
 	PRECACHE_SOUND("gonome/gonome_step1.wav");
 	PRECACHE_SOUND("gonome/gonome_step2.wav");
-	PRECACHE_SOUND("weapons/m161.wav");
+	PRECACHE_SOUND("weapons/sks-1.wav");
+	PRECACHE_SOUND("weapons/sks-2.wav");
 
 	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 }	

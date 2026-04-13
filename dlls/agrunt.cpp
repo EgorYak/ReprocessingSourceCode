@@ -1171,7 +1171,7 @@ Schedule_t* CAGrunt::GetScheduleOfType(int Type)
 	return CSquadMonster::GetScheduleOfType(Type);
 }
 
-
+#define ACOMM_AE_PULL (8)
 
 class CACommander : public CAGrunt
 {
@@ -1179,8 +1179,31 @@ public:
 	void Spawn() override;
 	void Precache() override;
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
+	bool CheckRangeAttack2(float flDot, float flDist) override;
+
+	bool m_fCanGrabAttack;
+	float m_flNextGrabAttackCheck;
+
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
 };
 LINK_ENTITY_TO_CLASS(monster_alien_commander, CACommander);
+
+TYPEDESCRIPTION CACommander::m_SaveData[] =
+{
+	DEFINE_FIELD(CACommander, m_fCanHornetAttack, FIELD_BOOLEAN),
+	DEFINE_FIELD(CACommander, m_flNextHornetAttackCheck, FIELD_TIME),
+	DEFINE_FIELD(CACommander, m_flNextPainTime, FIELD_TIME),
+	DEFINE_FIELD(CACommander, m_flNextSpeakTime, FIELD_TIME),
+	DEFINE_FIELD(CACommander, m_flNextWordTime, FIELD_TIME),
+	DEFINE_FIELD(CACommander, m_iLastWord, FIELD_INTEGER),
+
+	DEFINE_FIELD(CACommander, m_fCanGrabAttack, FIELD_BOOLEAN),
+	DEFINE_FIELD(CACommander, m_flNextGrabAttackCheck, FIELD_TIME),
+};
+
+IMPLEMENT_SAVERESTORE(CACommander, CSquadMonster);
 
 //=========================================================
 // Spawn
@@ -1232,9 +1255,55 @@ void CACommander::Precache()
 
 	PRECACHE_SOUND("hassault/hw_shoot1.wav");
 
+	PRECACHE_SOUND("agrunt/ag_fire1.wav");
+	PRECACHE_SOUND("agrunt/ag_fire2.wav");
+	PRECACHE_SOUND("agrunt/ag_fire3.wav");
+
 	iAgruntMuzzleFlash = PRECACHE_MODEL("sprites/muz4.spr");
 
-	UTIL_PrecacheOther("hornet");
+	PRECACHE_MODEL("sprites/xspark4.spr");
+
+	UTIL_PrecacheOther("controller_head_ball");
+	UTIL_PrecacheOther("grapple_tip");
+}
+
+//=========================================================
+// CheckRangeAttack2
+//
+//=========================================================
+bool CACommander::CheckRangeAttack2(float flDot, float flDist)
+{
+	/*
+	if (gpGlobals->time < m_flNextGrabAttackCheck)
+	{
+		return m_fCanGrabAttack;
+	}
+
+	if (HasConditions(bits_COND_SEE_ENEMY) && flDist >= AGRUNT_MELEE_DIST && flDist <= 1024 && flDot >= 0.5 && NoFriendlyFire())
+	{
+		TraceResult tr;
+		Vector vecArmPos, vecArmDir;
+
+		// verify that a shot fired from the gun will hit the enemy before the world.
+		// !!!LATER - we may wish to do something different for projectile weapons as opposed to instant-hit
+		UTIL_MakeVectors(pev->angles);
+		GetAttachment(0, vecArmPos, vecArmDir);
+		//		UTIL_TraceLine( vecArmPos, vecArmPos + gpGlobals->v_forward * 256, ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine(vecArmPos, m_hEnemy->BodyTarget(vecArmPos), dont_ignore_monsters, ENT(pev), &tr);
+
+		if (tr.flFraction == 1.0 || tr.pHit == m_hEnemy->edict())
+		{
+			m_flNextGrabAttackCheck = gpGlobals->time + RANDOM_FLOAT(2, 5);
+			m_fCanGrabAttack = true;
+			return m_fCanGrabAttack;
+		}
+	}
+
+	m_flNextGrabAttackCheck = gpGlobals->time + 2;
+	m_fCanGrabAttack = false;
+	return m_fCanGrabAttack;
+	*/
+	return false;
 }
 
 //=========================================================
@@ -1293,11 +1362,11 @@ void CACommander::HandleAnimEvent(MonsterEvent_t* pEvent)
 		WRITE_BYTE(128);				 // brightness
 		MESSAGE_END();
 
-		CBaseEntity* pHornet = CBaseEntity::Create("hornet", vecArmPos, UTIL_VecToAngles(vecDirToEnemy), edict());
-		UTIL_MakeVectors(pHornet->pev->angles);
-		pHornet->pev->velocity = gpGlobals->v_forward * 700;
+		CBaseMonster* pBall = (CBaseMonster*)Create("controller_head_ball", vecArmPos, UTIL_VecToAngles(vecDirToEnemy), edict());
 
-
+		pBall->pev->rendercolor.x = 255;
+		pBall->pev->rendercolor.y = 32;
+		pBall->pev->rendercolor.z = 128;
 
 		switch (RANDOM_LONG(0, 2))
 		{
@@ -1312,20 +1381,48 @@ void CACommander::HandleAnimEvent(MonsterEvent_t* pEvent)
 			break;
 		}
 
-		/*
-		CBaseMonster* pHornetMonster = pHornet->MyMonsterPointer();
+		pBall->pev->velocity = Vector(0, 0, 32);
+		pBall->m_hEnemy = m_hEnemy;
+		pBall->pev->velocity = gpGlobals->v_forward * 300;
+	}
+	break;
 
-		if (pHornetMonster)
+	case ACOMM_AE_PULL:
+	{
+		// m_vecEnemyLKP should be center of enemy body
+		Vector vecArmPos, vecArmDir;
+		Vector vecDirToEnemy;
+		Vector angDir;
+
+		if (HasConditions(bits_COND_SEE_ENEMY))
 		{
-			pHornetMonster->m_hEnemy = m_hEnemy;
+			vecDirToEnemy = ((m_vecEnemyLKP)-pev->origin);
+			angDir = UTIL_VecToAngles(vecDirToEnemy);
+			vecDirToEnemy = vecDirToEnemy.Normalize();
 		}
-		*/
+		else
+		{
+			return;
+		}
+
+		// make angles +-180
+		if (angDir.x > 180)
+		{
+			angDir.x = angDir.x - 360;
+		}
+		GetAttachment(0, vecArmPos, vecArmDir);
+
+		vecArmPos = vecArmPos + vecDirToEnemy * 32;
+
+		CBaseMonster* pTongue = (CBaseMonster*)Create("grapple_tip", vecArmPos, UTIL_VecToAngles(vecDirToEnemy), edict());
+
+		pTongue->m_hEnemy = m_hEnemy;
 	}
 	break;
 
 	case AGRUNT_AE_LEFT_PUNCH:
 	{
-		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB);
+		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch*2, DMG_CLUB);
 
 		if (pHurt)
 		{
@@ -1355,7 +1452,7 @@ void CACommander::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case AGRUNT_AE_RIGHT_PUNCH:
 	{
-		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB);
+		CBaseEntity* pHurt = CheckTraceHullAttack(AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch*2, DMG_CLUB);
 
 		if (pHurt)
 		{

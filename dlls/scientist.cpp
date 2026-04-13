@@ -1484,6 +1484,7 @@ class CMengele : public CScientist
 public:
 	void Spawn() override;
 	void Precache() override;
+	void Killed(entvars_t* pevAttacker, int iGib) override;
 	int Classify() override;
 };
 
@@ -1498,6 +1499,21 @@ int CMengele::Classify()
 	return CLASS_HUMAN_MILITARY;
 }
 
+void CMengele::Killed(entvars_t* pevAttacker, int iGib)
+{
+	if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+	{
+		pev->spawnflags &= ~SF_MONSTER_PREDISASTER;
+		CBaseEntity* pGun = DropItem("item_healthkit", Center(), pev->angles);
+		if (pGun)
+		{
+			pGun->pev->velocity = Vector(RANDOM_FLOAT(-100, 100), RANDOM_FLOAT(-100, 100), RANDOM_FLOAT(200, 300));
+			pGun->pev->avelocity = Vector(0, RANDOM_FLOAT(200, 400), 0);
+		}
+	}
+	CTalkMonster::Killed(pevAttacker, iGib);
+}
+
 //=========================================================
 // Spawn
 //=========================================================
@@ -1510,7 +1526,17 @@ void CMengele::Spawn()
 
 	Precache();
 
-	SET_MODEL(ENT(pev), "models/xlabsci.mdl");
+	if (pev->model)
+	{
+		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC 
+	}
+	else
+	{
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+			SET_MODEL(ENT(pev), "models/scientist.mdl");
+		else
+			SET_MODEL(ENT(pev), "models/xlabsci.mdl");
+	}
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
 
 	pev->solid = SOLID_SLIDEBOX;
@@ -1541,7 +1567,18 @@ void CMengele::Spawn()
 //=========================================================
 void CMengele::Precache()
 {
-	PRECACHE_MODEL("models/xlabsci.mdl");
+	if (pev->model)
+		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC 
+	else
+	{
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+		{
+			PRECACHE_MODEL("models/scientist.mdl");
+			UTIL_PrecacheOther("item_healthkit");
+		}
+		else
+			PRECACHE_MODEL("models/xlabsci.mdl");
+	}
 	PRECACHE_SOUND("scientist/sci_pain1.wav");
 	PRECACHE_SOUND("scientist/sci_pain2.wav");
 	PRECACHE_SOUND("scientist/sci_pain3.wav");
@@ -1615,4 +1652,359 @@ void CDeadMengele::Spawn()
 
 	//	pev->skin += 2; // use bloody skin -- UNDONE: Turn this back on when we have a bloody skin again!
 	MonsterInitDead();
+}
+
+class CCoolGuy : public CScientist
+{
+public:
+	void Precache() override;
+
+	void Spawn() override;
+
+	void DeclineFollowing() override;
+
+	bool TakeDamage(entvars_t* inflictor, entvars_t* attacker, float flDamage, int bitsDamageType) override;
+
+	void PainSound() override;
+
+	void Scream();
+
+	void RunTask(Task_t* pTask) override;
+	void StartTask(Task_t* pTask) override;
+
+	// Override these to set behavior
+	Schedule_t* GetSchedule() override;
+
+	void TalkInit();
+};
+
+LINK_ENTITY_TO_CLASS(monster_madman, CCoolGuy);
+
+//=========================================================
+// Spawn
+//=========================================================
+void CCoolGuy::Spawn()
+{
+	if (pev->body == -1)
+	{														 // -1 chooses a random head
+		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1); // pick a head, any head
+	}
+
+	Precache();
+
+	if (pev->model)
+		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC 
+	else
+		SET_MODEL(ENT(pev), "models/scicast1.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_STEP;
+	m_bloodColor = BLOOD_COLOR_RED;
+	pev->health = gSkillData.scientistHealth;
+	pev->view_ofs = Vector(0, 0, 50);  // position of the eyes relative to monster's origin.
+	m_flFieldOfView = VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so scientists will notice player and say hello
+	m_MonsterState = MONSTERSTATE_NONE;
+
+	//	m_flDistTooFar		= 256.0;
+
+	m_afCapability = bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_OPEN_DOORS | bits_CAP_AUTO_DOORS | bits_CAP_USE;
+
+	MonsterInit();
+	SetUse(&CCoolGuy::FollowerUse);
+}
+
+void CCoolGuy::Precache()
+{
+	if (pev->model)
+		PRECACHE_MODEL(STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/scicast1.mdl");
+
+	// every new scientist must call this, otherwise
+	// when a level is loaded, nobody will talk (time is reset to 0)
+	TalkInit();
+
+	CTalkMonster::Precache();
+}
+
+void CCoolGuy::Scream()
+{
+}
+
+
+void CCoolGuy::StartTask(Task_t* pTask)
+{
+	switch (pTask->iTask)
+	{
+	case TASK_SAY_HEAL:
+		//		if ( FOkToSpeak() )
+		Talk(2);
+		m_hTalkTarget = m_hTargetEnt;
+		PlaySentence("CG_HEAL", 2, VOL_NORM, ATTN_IDLE);
+
+		TaskComplete();
+		break;
+
+	case TASK_SCREAM:
+		Scream();
+		TaskComplete();
+		break;
+
+	case TASK_RANDOM_SCREAM:
+		if (RANDOM_FLOAT(0, 1) < pTask->flData)
+			Scream();
+		TaskComplete();
+		break;
+
+	case TASK_SAY_FEAR:
+		// Marphy Fact FIles Fix - This speech check always fails during combat, so removing
+		//if ( FOkToSpeak() )
+		/*
+		if (m_hEnemy)
+		{
+			Talk(2);
+			m_hTalkTarget = m_hEnemy;
+			if (m_hEnemy->IsPlayer())
+				PlaySentence("SC_PLFEAR", 5, VOL_NORM, ATTN_NORM);
+			else
+				PlaySentence("SC_FEAR", 5, VOL_NORM, ATTN_NORM);
+		}
+		*/
+		TaskComplete();
+		break;
+
+	case TASK_HEAL:
+		m_IdealActivity = ACT_MELEE_ATTACK1;
+		break;
+
+	case TASK_RUN_PATH_SCARED:
+		//m_movementActivity = ACT_RUN_SCARED;
+		m_movementActivity = ACT_RUN;
+		break;
+
+	case TASK_MOVE_TO_TARGET_RANGE_SCARED:
+	{
+		if ((m_hTargetEnt->pev->origin - pev->origin).Length() < 1)
+			TaskComplete();
+		else
+		{
+			m_vecMoveGoal = m_hTargetEnt->pev->origin;
+			if (!MoveToTarget(ACT_WALK, 0.5))
+				TaskFail();
+		}
+	}
+	break;
+
+	default:
+		CTalkMonster::StartTask(pTask);
+		break;
+	}
+}
+
+void CCoolGuy::RunTask(Task_t* pTask)
+{
+	switch (pTask->iTask)
+	{
+	case TASK_RUN_PATH_SCARED:
+		if (MovementIsComplete())
+			TaskComplete();
+
+		// Marphy Fact Files Fix - Reducing scream (which didn't work before) chance significantly
+		//if ( RANDOM_LONG(0,31) < 8 )
+		if (RANDOM_LONG(0, 63) < 1)
+			Scream();
+		break;
+
+	case TASK_MOVE_TO_TARGET_RANGE_SCARED:
+	{
+		// Marphy Fact Files Fix - Removing redundant scream
+		//if ( RANDOM_LONG(0,63)< 8 )
+		//Scream();
+
+		if (m_hEnemy == NULL)
+		{
+			TaskFail();
+		}
+		else
+		{
+			float distance;
+
+			distance = (m_vecMoveGoal - pev->origin).Length2D();
+			// Re-evaluate when you think your finished, or the target has moved too far
+			if ((distance < pTask->flData) || (m_vecMoveGoal - m_hTargetEnt->pev->origin).Length() > pTask->flData * 0.5)
+			{
+				m_vecMoveGoal = m_hTargetEnt->pev->origin;
+				distance = (m_vecMoveGoal - pev->origin).Length2D();
+				FRefreshRoute();
+			}
+
+			// Set the appropriate activity based on an overlapping range
+			// overlap the range to prevent oscillation
+			if (distance < pTask->flData)
+			{
+				TaskComplete();
+				RouteClear(); // Stop moving
+			}
+			else if (distance < 190 && m_movementActivity != ACT_WALK)
+				m_movementActivity = ACT_WALK;
+			else if (distance >= 270 && m_movementActivity != ACT_RUN)
+				m_movementActivity = ACT_RUN;
+		}
+	}
+	break;
+
+	case TASK_HEAL:
+		if (m_fSequenceFinished)
+		{
+			TaskComplete();
+		}
+		else
+		{
+			if (TargetDistance() > 90)
+				TaskComplete();
+			pev->ideal_yaw = UTIL_VecToYaw(m_hTargetEnt->pev->origin - pev->origin);
+			ChangeYaw(pev->yaw_speed);
+		}
+		break;
+	default:
+		CTalkMonster::RunTask(pTask);
+		break;
+	}
+}
+
+Schedule_t* CCoolGuy::GetSchedule()
+{
+	// so we don't keep calling through the EHANDLE stuff
+	CBaseEntity* pEnemy = m_hEnemy;
+
+	if (HasConditions(bits_COND_HEAR_SOUND))
+	{
+		CSound* pSound;
+		pSound = PBestSound();
+
+		ASSERT(pSound != NULL);
+		if (pSound && (pSound->m_iType & bits_SOUND_DANGER) != 0)
+			return GetScheduleOfType(SCHED_TAKE_COVER_FROM_BEST_SOUND);
+	}
+
+	switch (m_MonsterState)
+	{
+	case MONSTERSTATE_ALERT:
+	case MONSTERSTATE_IDLE:
+		if (HasConditions(bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE))
+		{
+			// flinch if hurt
+			return GetScheduleOfType(SCHED_SMALL_FLINCH);
+		}
+
+		// Behavior for following the player
+		if (IsFollowing())
+		{
+			if (!m_hTargetEnt->IsAlive())
+			{
+				// UNDONE: Comment about the recently dead player here?
+				StopFollowing(false);
+				break;
+			}
+
+			int relationship = R_NO;
+
+			// Nothing scary, just me and the player
+			if (pEnemy != NULL)
+				relationship = IRelationship(pEnemy);
+
+			// UNDONE: Model fear properly, fix R_FR and add multiple levels of fear
+			if (relationship != R_DL && relationship != R_HT)
+			{
+				// If I'm already close enough to my target
+				if (TargetDistance() <= 128)
+				{
+					if (CanHeal()) // Heal opportunistically
+						return slHeal;
+					if (HasConditions(bits_COND_CLIENT_PUSH)) // Player wants me to move
+						return GetScheduleOfType(SCHED_MOVE_AWAY_FOLLOW);
+				}
+				return GetScheduleOfType(SCHED_TARGET_FACE); // Just face and follow.
+			}
+			else // UNDONE: When afraid, scientist won't move out of your way.  Keep This?  If not, write move away scared
+			{
+				if (HasConditions(bits_COND_NEW_ENEMY))				// I just saw something new and scary, react
+					return GetScheduleOfType(SCHED_FEAR);			// React to something scary
+				return GetScheduleOfType(SCHED_TARGET_FACE_SCARED); // face and follow, but I'm scared!
+			}
+		}
+
+		if (HasConditions(bits_COND_CLIENT_PUSH)) // Player wants me to move
+			return GetScheduleOfType(SCHED_MOVE_AWAY);
+
+		// try to say something about smells
+		TrySmellTalk();
+		break;
+	case MONSTERSTATE_COMBAT:
+		if (HasConditions(bits_COND_NEW_ENEMY))
+			return slFear; // Point and scream!
+
+		if (HasConditions(bits_COND_SEE_ENEMY))
+		{
+			// Marphy Fact Files Fix - Fix scientists not disregarding enemy after hiding
+			return slScientistCover; // Take Cover
+		}
+
+		if (HasConditions(bits_COND_HEAR_SOUND))
+			return slTakeCoverFromBestSound; // Cower and panic from the scary sound!
+
+		return slScientistCover; // Run & Cower
+		break;
+	}
+
+	return CTalkMonster::GetSchedule();
+}
+
+void CCoolGuy::DeclineFollowing()
+{
+	Talk(10);
+	m_hTalkTarget = m_hEnemy;
+	PlaySentence("CG_POK", 2, VOL_NORM, ATTN_NORM);
+}
+
+void CCoolGuy::TalkInit()
+{
+	CTalkMonster::TalkInit();
+
+	// scientists speach group names (group names are in sentences.txt)
+
+	m_szGrp[TLK_ANSWER] = "CG_ANSWER";
+	m_szGrp[TLK_QUESTION] = "CG_QUESTION";
+	m_szGrp[TLK_IDLE] = "CG_IDLE";
+	m_szGrp[TLK_STARE] = "CG_STARE";
+	m_szGrp[TLK_USE] = "CG_OK";
+	m_szGrp[TLK_UNUSE] = "CG_WAIT";
+	m_szGrp[TLK_STOP] = "CG_STOP";
+	m_szGrp[TLK_NOSHOOT] = "CG_SCARED";
+	m_szGrp[TLK_HELLO] = "CG_HELLO";
+
+	m_szGrp[TLK_PLHURT1] = "!CG_CUREA";
+	m_szGrp[TLK_PLHURT2] = "!CG_CUREB";
+	m_szGrp[TLK_PLHURT3] = "!CG_CUREC";
+
+	m_szGrp[TLK_PHELLO] = "CG_PHELLO";
+	m_szGrp[TLK_PIDLE] = "CG_PIDLE";
+	m_szGrp[TLK_PQUESTION] = "CG_PQUEST";
+	m_szGrp[TLK_SMELL] = "CG_SMELL";
+
+	m_szGrp[TLK_WOUND] = "CG_WOUND";
+	m_szGrp[TLK_MORTAL] = "CG_MORTAL";
+
+	m_voicePitch = 100;
+}
+
+bool CCoolGuy::TakeDamage(entvars_t* inflictor, entvars_t* attacker, float flDamage, int bitsDamageType)
+{
+	// Disable scientist damage handling so Rosenberg keeps following the player
+	return CTalkMonster::TakeDamage(inflictor, attacker, flDamage, bitsDamageType);
+}
+
+void CCoolGuy::PainSound()
+{
 }

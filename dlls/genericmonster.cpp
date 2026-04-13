@@ -35,11 +35,58 @@ public:
 	void Spawn() override;
 	void Precache() override;
 	void SetYawSpeed() override;
+	bool KeyValue(KeyValueData* pkvd) override;
 	int Classify() override;
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	int ISoundMask() override;
+	void DeathSound() override;
+	void PainSound() override;
+
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
+
+	int m_iszDieSound;	// string for die sound
 };
 LINK_ENTITY_TO_CLASS(monster_generic, CGenericMonster);
+
+TYPEDESCRIPTION CGenericMonster::m_SaveData[] =
+{
+	DEFINE_FIELD(CGenericMonster, m_iszDieSound, FIELD_STRING),
+};
+
+IMPLEMENT_SAVERESTORE(CGenericMonster, CBaseMonster);
+
+
+bool CGenericMonster::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "diesound"))
+	{
+		m_iszDieSound = ALLOC_STRING(pkvd->szValue);
+		return true;
+	}
+
+	return CBaseMonster::KeyValue(pkvd);
+}
+
+//=========================================================
+// DieSound
+//=========================================================
+void CGenericMonster::DeathSound()
+{
+	if (!FStringNull(m_iszDieSound) && strlen(STRING(m_iszDieSound)) > 0)
+	{
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, STRING(m_iszDieSound), 1.0, ATTN_NORM);
+	}
+}
+
+void CGenericMonster::PainSound()
+{
+	if (!FStringNull(m_iszDieSound) && strlen(STRING(m_iszDieSound)) > 0)
+	{
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, STRING(m_iszDieSound), 1.0, ATTN_NORM);
+	}
+}
 
 //=========================================================
 // Classify - indicates this monster's place in the
@@ -134,6 +181,11 @@ void CGenericMonster::Spawn()
 void CGenericMonster::Precache()
 {
 	PRECACHE_MODEL((char*)STRING(pev->model));
+
+	if (!FStringNull(m_iszDieSound) && strlen(STRING(m_iszDieSound)) > 0)
+	{
+		PRECACHE_SOUND(STRING(m_iszDieSound));
+	}
 }
 
 //=========================================================

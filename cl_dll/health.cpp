@@ -208,7 +208,7 @@ bool CHudHealth::Draw(float flTime)
 	ScaleColors(r, g, b, a);
 
 	// Only draw health if we have the suit.
-	if (true)
+	if (gHUD.HasSuit())
 	{
 		HealthWidth = gHUD.GetSpriteRect(gHUD.m_HUD_number_0).right - gHUD.GetSpriteRect(gHUD.m_HUD_number_0).left;
 		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
@@ -259,8 +259,8 @@ bool CHudHealth::Draw(float flTime)
 		if (gHUD.m_bRadio)
 		{
 			UnpackRGB(r, g, b, RGB_YELLOWISH);
-			y = gHUD.m_iFontHeight;
-			x = CrossWidth / 2;
+			y = CrossWidth * 3;
+			x = gHUD.m_iHudScaleWidth - CrossWidth * 2;
 
 			SPR_Set(gHUD.GetSprite(m_HUD_radio), r, g, b);
 			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_radio));

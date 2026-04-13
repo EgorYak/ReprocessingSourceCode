@@ -193,9 +193,10 @@ IMPLEMENT_SAVERESTORE(CKinghHVR, CBaseMonster);
 
 const char* CPinguin::pAttackSounds[] =
 {
-	"X/x_attack1.wav",
-	"X/x_attack2.wav",
-	"X/x_attack3.wav",
+	"kingpin/attack1.wav",
+	"kingpin/attack2.wav",
+	"kingpin/attack3.wav",
+	"kingpin/attack4.wav",
 };
 
 const char* CPinguin::pBallSounds[] =
@@ -210,26 +211,24 @@ const char* CPinguin::pShootSounds[] =
 
 const char* CPinguin::pRechargeSounds[] =
 {
-	"X/x_recharge1.wav",
-	"X/x_recharge2.wav",
-	"X/x_recharge3.wav",
+	"kingpin/misc1.wav",
 };
 
 const char* CPinguin::pLaughSounds[] =
 {
-	"X/x_laugh1.wav",
-	"X/x_laugh2.wav",
+	"kingpin/pain1.wav",
+	"kingpin/pain2.wav",
 };
 
 const char* CPinguin::pPainSounds[] =
 {
-	"X/x_pain1.wav",
-	"X/x_pain2.wav",
+	"kingpin/pain1.wav",
+	"kingpin/pain2.wav",
 };
 
 const char* CPinguin::pDeathSounds[] =
 {
-	"X/x_die1.wav",
+	"kingpin/die.wav",
 };
 
 //=========================================================
@@ -473,15 +472,6 @@ void CPinguin::IdleSound(void)
 //=========================================================
 void CPinguin::WarmUpSound(void)
 {
-	switch (RANDOM_LONG(0, 1))
-	{
-	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "kingpin/attack1.wav", 0.7, ATTN_NORM);
-		break;
-	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "kingpin/attack2.wav", 0.7, ATTN_NORM);
-		break;
-	}
 	if (RANDOM_LONG(0, 4) == 0)
 		EMIT_SOUND(edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAttackSounds), 1.0, 0.2);
 
@@ -490,15 +480,6 @@ void CPinguin::WarmUpSound(void)
 
 void CPinguin::WarmUpSound2(void)
 {
-	switch (RANDOM_LONG(0, 1))
-	{
-	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "kingpin/attack3.wav", 0.7, ATTN_NORM);
-		break;
-	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "kingpin/attack4.wav", 0.7, ATTN_NORM);
-		break;
-	}
 	if (RANDOM_LONG(0, 4) == 0)
 		EMIT_SOUND(edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAttackSounds), 1.0, 0.2);
 
@@ -518,7 +499,6 @@ void CPinguin::AlertSound(void)
 //=========================================================
 void CPinguin::DeathSound(void)
 {
-	EMIT_SOUND(ENT(pev), CHAN_BODY, "kingpin/die.wav", 1, ATTN_NORM);
 	EMIT_SOUND(edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pDeathSounds), 1.0, 0.1);
 }
 

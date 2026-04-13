@@ -488,6 +488,7 @@ typedef struct
 
 float m_flOfs;
 float m_flWallOfs;
+float m_flMaxWallOfs = 5.0f;
 
 float m_flWeaponLag = 1.5f;
 
@@ -785,7 +786,14 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 			m_flOfs = 0;
 	}
 
-	pparams->vieworg[2] += m_flOfs;
+	if (view->model)
+	{
+		if (
+			strcmp(view->model->name, "models/v_rpg.mdl")
+			&& strcmp(view->model->name, "models/v_gauss.mdl")
+			)
+			pparams->vieworg[2] += m_flOfs;
+	}
 
 	// Treating cam_ofs[2] as the distance
 	if (0 != CL_IsThirdPerson())
@@ -838,7 +846,7 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 		Vector forward, endPos;
 		AngleVectors(viewAngles, forward, NULL, NULL);
 
-		float checkDistance = 64.0f; // Check up to 32 units ahead
+		float checkDistance = 32.0f; // Check up to 32 units ahead
 		VectorMA(eyePos, checkDistance, forward, endPos);
 
 		pmtrace_t tr;
@@ -847,22 +855,23 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 
 		if (tr.fraction < 1.0f && tr.ent != ent->index)
 		{
+			//gEngfuncs.Con_Printf("tr.fraction = %f\n", tr.fraction);
 			float distToWall = tr.fraction * checkDistance;
 			float lowerScale = 1.0f - (distToWall / checkDistance);
+
 			lowerScale = V_max(0.0f, V_min(1.0f, lowerScale));
-			if (m_flWallOfs < 4.9f * lowerScale)
-				m_flWallOfs += 0.15f;
-			else if (m_flWallOfs > 5.15f * lowerScale)
-				m_flWallOfs -= 0.15f;
-			else
-				m_flWallOfs = (5.0f * lowerScale);
+			float targetWallOfs = m_flMaxWallOfs * lowerScale;
+			float diff = targetWallOfs - m_flWallOfs;
+			m_flWallOfs += V_max(-0.15f, V_min(0.15f, diff));
+
+			//gEngfuncs.Con_Printf("m_flWallOfs = %f\n", m_flWallOfs);
 		}
 		else
 		{
-			if (m_flWallOfs > 0.15)
-				m_flWallOfs -= 0.10f;
-			else
-				m_flWallOfs = 0;
+			float targetWallOfs = 0;
+			float diff = targetWallOfs - m_flWallOfs;
+			m_flWallOfs += V_max(-0.15f, V_min(0.15f, diff));
+			//gEngfuncs.Con_Printf("m_flWallOfs = %f\n", m_flWallOfs);
 		}
 		for (int i = 0; i < 3; i++)
 		{
@@ -934,13 +943,16 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 	//gEngfuncs.Con_Printf("\nX %3.2f Y %3.2f", blendMouseX, blendMouseY);
 	if (view->model)
 	{
-		if (strcmp(view->model->name, "models/v_9mmhandgun.mdl")
+		if (
+			strcmp(view->model->name, "models/v_9mmhandgun.mdl")
 			&& strcmp(view->model->name, "models/v_357.mdl")
 			&& strcmp(view->model->name, "models/v_grenade.mdl")
 			&& strcmp(view->model->name, "models/v_satchel.mdl")
 			&& strcmp(view->model->name, "models/v_satchel_radio.mdl")
 			&& strcmp(view->model->name, "models/v_squeak.mdl")
 			&& strcmp(view->model->name, "models/v_tripmine.mdl")
+			&& strcmp(view->model->name, "models/v_rpg.mdl")
+			&& strcmp(view->model->name, "models/v_gauss.mdl")
 			)
 		{
 			view->angles[ROLL] -= blendMouseX;
@@ -980,13 +992,17 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 		for (int i = 0; i < 3; i++)
 		{
 			//gEngfuncs.Con_Printf("\n%s", view->model->name);
-			if (strcmp(view->model->name, "models/v_9mmhandgun.mdl")
+			if (
+				strcmp(view->model->name, "models/v_9mmhandgun.mdl")
 				&& strcmp(view->model->name, "models/v_357.mdl")
 				&& strcmp(view->model->name, "models/v_grenade.mdl")
 				&& strcmp(view->model->name, "models/v_satchel.mdl")
 				&& strcmp(view->model->name, "models/v_satchel_radio.mdl")
 				&& strcmp(view->model->name, "models/v_squeak.mdl")
-				&& strcmp(view->model->name, "models/v_tripmine.mdl"))
+				&& strcmp(view->model->name, "models/v_tripmine.mdl")
+				&& strcmp(view->model->name, "models/v_rpg.mdl")
+				&& strcmp(view->model->name, "models/v_gauss.mdl")
+				)
 			{
 				view->origin[i] += 0.2 * blendMouseX * pparams->right[i];
 				view->origin[i] -= 0.35 * blendMouseY * pparams->up[i];

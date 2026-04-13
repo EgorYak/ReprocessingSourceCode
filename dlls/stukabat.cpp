@@ -559,7 +559,7 @@ IMPLEMENT_CUSTOM_SCHEDULES( CStukaBat, CFlyingMonster );
 //=========================================================
 int	CStukaBat :: Classify ( void )
 {
-	return	CLASS_ALIEN_MONSTER;
+	return	CLASS_ALIEN_MILITARY;
 }
 
 //=========================================================

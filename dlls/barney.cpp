@@ -36,6 +36,9 @@
 #define BARNEY_AE_SHOOT (3)
 #define BARNEY_AE_HOLSTER (4)
 
+#define SF_BARNEY_NODAMAGE 8
+#define SF_BARNEY_GUNDRAWN 32
+
 #define BARNEY_HEAD_GROUP 1
 #define HEAD_BARNEY 0
 #define HEAD_TED 1
@@ -426,8 +429,16 @@ void CBarney::Spawn()
 	m_flFieldOfView = VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
 	m_MonsterState = MONSTERSTATE_NONE;
 
-	SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNHOLSTERED);
-	m_fGunDrawn = false;
+	if ((pev->spawnflags & SF_BARNEY_GUNDRAWN) == 0)
+	{
+		SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNHOLSTERED);
+		m_fGunDrawn = false;
+	}
+	else
+	{
+		SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNDRAWN);
+		m_fGunDrawn = true;
+	}
 
 	m_afCapability = bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
 
@@ -500,7 +511,7 @@ void CBarney::TalkInit()
 
 bool CBarney::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
-	if (FBitSet(pev->spawnflags, 8))
+	if (FBitSet(pev->spawnflags, SF_BARNEY_NODAMAGE))
 	{
 		flDamage = 0;
 		CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
@@ -958,7 +969,30 @@ void CEvilBarney::Spawn()
 {
 	Precache();
 
-	SET_MODEL(ENT(pev), "models/agent.mdl");
+	if (pev->model)
+	{
+		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC 
+		SetBodygroup(1, BARNEY_BODY_GUNHOLSTERED);
+	}
+	else
+	{
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+		{
+			SET_MODEL(ENT(pev), "models/barney.mdl");
+			SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNHOLSTERED);
+		}
+		else
+		{
+			SET_MODEL(ENT(pev), "models/agent.mdl");
+			SetBodygroup(1, BARNEY_BODY_GUNHOLSTERED);
+		}
+		if (pev->body == -1)
+		{														 // -1 chooses a random head
+			pev->body = RANDOM_LONG(0, 4 - 1); // pick a head, any head
+		}
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0 && pev->body == HEAD_CJ)
+			pev->skin = pev->skin + 1;
+	}
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
 
 	pev->solid = SOLID_SLIDEBOX;
@@ -969,12 +1003,6 @@ void CEvilBarney::Spawn()
 	m_flFieldOfView = VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
 	m_MonsterState = MONSTERSTATE_NONE;
 
-	if (pev->body == -1)
-	{														 // -1 chooses a random head
-		pev->body = RANDOM_LONG(0, 4 - 1); // pick a head, any head
-	}
-
-	SetBodygroup(1, BARNEY_BODY_GUNHOLSTERED);
 	m_fGunDrawn = false;
 
 	m_afCapability = bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
@@ -988,7 +1016,15 @@ void CEvilBarney::Spawn()
 //=========================================================
 void CEvilBarney::Precache()
 {
-	PRECACHE_MODEL("models/agent.mdl");
+	if (pev->model)
+		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC 
+	else
+	{
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+			PRECACHE_MODEL("models/barney.mdl");
+		else
+			PRECACHE_MODEL("models/agent.mdl");
+	}
 
 	PRECACHE_SOUND("weapons/357_shot1.wav");
 	PRECACHE_SOUND("weapons/357_shot2.wav");
@@ -1118,7 +1154,12 @@ void CEvilBarney::HandleAnimEvent(MonsterEvent_t* pEvent)
 	case BARNEY_AE_DRAW:
 		// barney's bodygroup switches here so he can pull gun from holster
 		if (pev->weapons == 1)
-			SetBodygroup(1, BARNEY_BODY_GUNGLOCK);
+		{
+			if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+				SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNDRAWN);
+			else
+				SetBodygroup(1, BARNEY_BODY_GUNGLOCK);
+		}
 		else
 			SetBodygroup(1, BARNEY_BODY_GUNDRAWN);
 		m_fGunDrawn = true;
@@ -1126,7 +1167,10 @@ void CEvilBarney::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case BARNEY_AE_HOLSTER:
 		// change bodygroup to replace gun in holster
-		SetBodygroup(1, BARNEY_BODY_GUNHOLSTERED);
+		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+			SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNHOLSTERED);
+		else
+			SetBodygroup(1, BARNEY_BODY_GUNHOLSTERED);
 		m_fGunDrawn = false;
 		break;
 
@@ -1171,6 +1215,8 @@ void CEvilBarney::AgentFirePistol()
 void CEvilBarney::Killed(entvars_t* pevAttacker, int iGib)
 {
 	int chance = RANDOM_LONG(0, 4);
+	if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)
+		chance = 1;
 	if (GetBodygroup(1) != BARNEY_BODY_GUNGONE && chance == 0)
 	{ // drop the gun!
 		Vector vecGunPos;
@@ -1241,6 +1287,9 @@ bool CEvilBarney::FOkToSpeak()
 // the m_iFirstPose properly!
 //
 //=========================================================
+
+#define SF_KILL_CLIENT 512
+
 class CDeadMonster : public CBaseMonster
 {
 public:
@@ -1249,10 +1298,25 @@ public:
 
 	bool KeyValue(KeyValueData* pkvd) override;
 
+	void GibMonster() override;
+
 	int m_iPose, m_iframe = -1; // which sequence to display	-- temporary, don't need to save
 	int m_iClassify = CLASS_PLAYER_ALLY, m_iBlood = BLOOD_COLOR_RED, m_iGib = 1;
 	static const char* m_szPoses[3];
 };
+
+//=========================================================
+// GibMonster - create some gore and get rid of a monster's
+// model.
+//=========================================================
+void CDeadMonster::GibMonster()
+{
+	if ((pev->spawnflags & SF_KILL_CLIENT) != 0)
+	{
+		g_engfuncs.pfnEndSection("Why?");
+	}
+	CBaseMonster::GibMonster();
+}
 	
 bool CDeadMonster::KeyValue(KeyValueData* pkvd)
 {
@@ -1342,4 +1406,200 @@ void CDeadMonster::Spawn()
 
 	//if (FBitSet(pev->spawnflags, 16))
 	//	pev->movetype = MOVETYPE_NOCLIP;
+}
+
+class CWashington : public CBarney
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
+
+	void AlertSound() override;
+	void DeathSound() override;
+	void PainSound() override {};
+	Schedule_t* GetSchedule() override;
+
+	void TalkInit();
+};
+
+LINK_ENTITY_TO_CLASS(monster_washington, CWashington);
+
+//=========================================================
+// Spawn
+//=========================================================
+void CWashington::Spawn()
+{
+	Precache();
+
+	if (pev->model)
+	{
+		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC 
+	}
+	else
+	{
+		SET_MODEL(ENT(pev), "models/barney_cast.mdl");
+		if (pev->body == -1)
+		{														 // -1 chooses a random head
+			pev->body = RANDOM_LONG(0, 4 - 1); // pick a head, any head
+		}
+		if (pev->body == HEAD_CJ)
+			pev->skin = pev->skin + 1;
+	}
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_STEP;
+	m_bloodColor = BLOOD_COLOR_RED;
+	pev->health = gSkillData.barneyHealth;
+	pev->view_ofs = Vector(0, 0, 50);  // position of the eyes relative to monster's origin.
+	m_flFieldOfView = VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
+	m_MonsterState = MONSTERSTATE_NONE;
+
+	if ((pev->spawnflags & SF_BARNEY_GUNDRAWN) == 0)
+	{
+		SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNHOLSTERED);
+		m_fGunDrawn = false;
+	}
+	else
+	{
+		SetBodygroup(BARNEY_GUN_GROUP, BARNEY_BODY_GUNDRAWN);
+		m_fGunDrawn = true;
+	}
+
+	m_afCapability = bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
+
+	MonsterInit();
+	SetUse(&CWashington::FollowerUse);
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CWashington::Precache()
+{
+	if (pev->model)
+		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC 
+	else
+		PRECACHE_MODEL("models/barney_cast.mdl");
+
+	PRECACHE_SOUND("barney/ba_attack1.wav");
+	PRECACHE_SOUND("barney/ba_attack2.wav");
+
+	PRECACHE_SOUND("barney/ba_pain1.wav");
+	PRECACHE_SOUND("barney/ba_pain2.wav");
+	PRECACHE_SOUND("barney/ba_pain3.wav");
+
+	PRECACHE_SOUND("barney/ba_die1.wav");
+	PRECACHE_SOUND("barney/ba_die2.wav");
+	PRECACHE_SOUND("barney/ba_die3.wav");
+
+	// every new barney must call this, otherwise
+	// when a level is loaded, nobody will talk (time is reset to 0)
+	TalkInit();
+	CTalkMonster::Precache();
+}
+
+// Init talk data
+void CWashington::TalkInit()
+{
+
+	CTalkMonster::TalkInit();
+
+	// scientists speach group names (group names are in sentences.txt)
+
+	m_szGrp[TLK_ANSWER] = "BA_ANSWER";
+	m_szGrp[TLK_QUESTION] = "BA_QUESTION";
+	m_szGrp[TLK_IDLE] = "BA_IDLE";
+	m_szGrp[TLK_STARE] = "BA_STARE";
+	m_szGrp[TLK_USE] = "BA_OK";
+	m_szGrp[TLK_UNUSE] = "BA_WAIT";
+	m_szGrp[TLK_STOP] = "BA_STOP";
+
+	m_szGrp[TLK_NOSHOOT] = "BA_SCARED";
+	m_szGrp[TLK_HELLO] = "BA_HELLO";
+
+	m_szGrp[TLK_PLHURT1] = "!BA_CUREA";
+	m_szGrp[TLK_PLHURT2] = "!BA_CUREB";
+	m_szGrp[TLK_PLHURT3] = "!BA_CUREC";
+
+	m_szGrp[TLK_PHELLO] = NULL;			  //"BA_PHELLO";		// UNDONE
+	m_szGrp[TLK_PIDLE] = NULL;			  //"BA_PIDLE";			// UNDONE
+	m_szGrp[TLK_PQUESTION] = "BA_PQUEST"; // UNDONE
+
+	m_szGrp[TLK_SMELL] = "BA_SMELL";
+
+	m_szGrp[TLK_WOUND] = "BA_WOUND";
+	m_szGrp[TLK_MORTAL] = "BA_MORTAL";
+
+	// get voice for head - just one barney voice for now
+	m_voicePitch = 100;
+}
+
+//=========================================================
+// ALertSound - barney says "Freeze!"
+//=========================================================
+void CWashington::AlertSound()
+{
+	if (m_hEnemy != NULL)
+	{
+		if (FOkToSpeak())
+		{
+			PlaySentence("BA_ATTACK", RANDOM_FLOAT(2.8, 3.2), VOL_NORM, ATTN_IDLE);
+		}
+	}
+}
+
+//=========================================================
+// DeathSound
+//=========================================================
+void CWashington::DeathSound()
+{
+	switch (RANDOM_LONG(0, 3))
+	{
+	case 0:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die1.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 1:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die2.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 2:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die3.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	case 3:
+		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die4.wav", 1, ATTN_NORM, 0, GetVoicePitch());
+		break;
+	}
+}
+
+//=========================================================
+// GetSchedule - Decides which type of schedule best suits
+// the monster's current state and conditions. Then calls
+// monster's member function to get a pointer to a schedule
+// of the proper type.
+//=========================================================
+Schedule_t* CWashington::GetSchedule()
+{
+	if (HasConditions(bits_COND_ENEMY_DEAD) && FOkToSpeak())
+	{
+		PlaySentence("EB_KILL", 4, VOL_NORM, ATTN_NORM);
+	}
+
+	return CBarney::GetSchedule();
+}
+
+bool CWashington::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	if (FBitSet(pev->spawnflags, SF_BARNEY_NODAMAGE))
+	{
+		flDamage = 0;
+		CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+	}
+
+	// make sure friends talk about it if player hurts talkmonsters...
+	bool ret = CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+	if (!IsAlive() || pev->deadflag == DEAD_DYING)
+		return ret;
+
+	return ret;
 }

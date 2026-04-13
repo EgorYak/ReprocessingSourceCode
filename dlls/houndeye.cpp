@@ -1310,6 +1310,7 @@ public:
 	void AlertSound() override;
 	void DeathSound() override;
 	void WarnSound();
+	void PrescheduleThink() override;
 	void PainSound() override;
 	void IdleSound() override;
 };
@@ -1554,4 +1555,36 @@ void CNamRat::PainSound()
 int CNamRat::Classify()
 {
 	return CLASS_ALIEN_MILITARY;
+}
+
+//=========================================================
+// PrescheduleThink
+//=========================================================
+void CNamRat::PrescheduleThink()
+{
+	// if the hound is mad and is running, make hunt noises.
+	if (m_MonsterState == MONSTERSTATE_COMBAT && m_Activity == ACT_RUN && RANDOM_FLOAT(0, 1) < 0.2)
+	{
+		WarnSound();
+	}
+
+	// if you are the leader, average the origins of each pack member to get an approximate center.
+	if (IsLeader())
+	{
+		CSquadMonster* pSquadMember;
+		int iSquadCount = 0;
+
+		for (int i = 0; i < MAX_SQUAD_MEMBERS; i++)
+		{
+			pSquadMember = MySquadMember(i);
+
+			if (pSquadMember)
+			{
+				iSquadCount++;
+				m_vecPackCenter = m_vecPackCenter + pSquadMember->pev->origin;
+			}
+		}
+
+		m_vecPackCenter = m_vecPackCenter / iSquadCount;
+	}
 }
