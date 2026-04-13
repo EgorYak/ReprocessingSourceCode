@@ -989,6 +989,11 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 
 	if (view->model)
 	{
+		if (!strcmp(view->model->name, "models/v_crossbow.mdl"))
+		{
+			blendMouseX *= 0.9f;
+			blendMouseY *= 0.9f;
+		}
 		for (int i = 0; i < 3; i++)
 		{
 			//gEngfuncs.Con_Printf("\n%s", view->model->name);
@@ -1755,6 +1760,7 @@ int V_FindViewModelByWeaponModel(int weaponindex)
 		{"models/p_tripmine.mdl", "models/v_tripmine.mdl"},
 		{"models/p_satchel_radio.mdl", "models/v_satchel_radio.mdl"},
 		{"models/p_satchel.mdl", "models/v_satchel.mdl"},
+		{"models/p_m16.mdl", "models/v_m16.mdl"},
 		{NULL, NULL} };
 
 	struct model_s* weaponModel = IEngineStudio.GetModelByIndex(weaponindex);

@@ -279,9 +279,9 @@ void CM16::WeaponIdle()
 		return;
 
 	int iAnim;
-	switch (RANDOM_LONG(0, 99))
+	switch (RANDOM_LONG(0, 100))
 	{
-	case 0:
+	case 44:
 		iAnim = M16_LONGIDLE;
 		break;
 

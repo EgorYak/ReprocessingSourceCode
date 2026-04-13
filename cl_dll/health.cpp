@@ -260,7 +260,7 @@ bool CHudHealth::Draw(float flTime)
 		{
 			UnpackRGB(r, g, b, RGB_YELLOWISH);
 			y = CrossWidth * 3;
-			x = gHUD.m_iHudScaleWidth - CrossWidth * 2;
+			x = gHUD.m_iHudScaleWidth - CrossWidth * 4;
 
 			SPR_Set(gHUD.GetSprite(m_HUD_radio), r, g, b);
 			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_radio));
