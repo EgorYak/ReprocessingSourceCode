@@ -147,6 +147,8 @@ TYPEDESCRIPTION CBreakable::m_SaveData[] =
 		DEFINE_FIELD(CBreakable, m_iszSpawnObject, FIELD_STRING),
 
 		// Explosion magnitude is stored in pev->impulse
+
+		DEFINE_FIELD(CBreakable, m_iStyle, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CBreakable, CBaseEntity);
@@ -164,6 +166,9 @@ void CBreakable::Spawn()
 	pev->movetype = MOVETYPE_PUSH;
 	m_angle = pev->angles.y;
 	pev->angles.y = 0;
+
+	if (m_iStyle != 0)
+		LIGHT_STYLE(m_iStyle, "m");
 
 	// HACK:  matGlass can receive decals, we need the client to know about this
 	//  so use class to store the material flag
@@ -772,6 +777,9 @@ void CBreakable::Die()
 	pev->solid = SOLID_NOT;
 	// Fire targets on break
 	SUB_UseTargets(NULL, USE_TOGGLE, 0);
+
+	if (m_iStyle != 0)
+		LIGHT_STYLE(m_iStyle, "a");
 
 	SetThink(&CBreakable::SUB_Remove);
 	pev->nextthink = pev->ltime + 0.1;

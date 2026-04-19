@@ -408,6 +408,11 @@ void CBaseMonster::FadeMonster()
 //=========================================================
 void CBaseMonster::GibMonster()
 {
+	if (m_iszGibTrigger && STRING(m_iszGibTrigger)[0] != '\0')
+	{
+		ALERT(at_aiconsole, "Gib Trigger Fire Target\n");
+		FireTargets(STRING(m_iszGibTrigger), this, this, USE_TOGGLE, 0);
+	}
 	TraceResult tr;
 	bool gibbed = false;
 
@@ -710,6 +715,12 @@ Killed
 */
 void CBaseMonster::Killed(entvars_t* pevAttacker, int iGib)
 {
+	if (m_iszKilledTrigger && STRING(m_iszKilledTrigger)[0] != '\0')
+	{
+		ALERT(at_aiconsole, "Killed Trigger Fire Target\n");
+		FireTargets(STRING(m_iszKilledTrigger), this, this, USE_TOGGLE, 0);
+	}
+
 	unsigned int cCount = 0;
 	bool fDone = false;
 

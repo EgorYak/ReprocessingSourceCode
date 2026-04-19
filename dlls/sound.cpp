@@ -135,6 +135,8 @@ public:
 
 	bool m_fActive;	 // only true when the entity is playing a looping sound
 	bool m_fLooping; // true when the sound played will loop
+
+	float m_fAttn = 0;
 };
 
 LINK_ENTITY_TO_CLASS(ambient_generic, CAmbientGeneric);
@@ -143,6 +145,8 @@ TYPEDESCRIPTION CAmbientGeneric::m_SaveData[] =
 		DEFINE_FIELD(CAmbientGeneric, m_flAttenuation, FIELD_FLOAT),
 		DEFINE_FIELD(CAmbientGeneric, m_fActive, FIELD_BOOLEAN),
 		DEFINE_FIELD(CAmbientGeneric, m_fLooping, FIELD_BOOLEAN),
+
+		DEFINE_FIELD(CAmbientGeneric, m_fAttn, FIELD_FLOAT),
 
 		// HACKHACK - This is not really in the spirit of the save/restore design, but save this
 		// out as a binary data block.  If the dynpitchvol_t is changed, old saved games will NOT
@@ -186,6 +190,11 @@ void CAmbientGeneric::Spawn()
 	else
 	{ // if the designer didn't set a sound attenuation, default to one.
 		m_flAttenuation = ATTN_STATIC;
+	}
+	if (m_fAttn) // overrides a flag values for more precision
+	{
+		m_flAttenuation = m_fAttn;
+		//ALERT(at_notice, "m_fAttn = %f", m_fAttn);
 	}
 
 	char* szSoundFile = (char*)STRING(pev->message);
@@ -672,6 +681,13 @@ bool CAmbientGeneric::KeyValue(KeyValueData* pkvd)
 		if (m_dpv.pitchrun < 0)
 			m_dpv.pitchrun = 0;
 
+		return true;
+	}
+
+	// attenuation
+	else if (FStrEq(pkvd->szKeyName, "custom_attn"))
+	{
+		m_fAttn = atof(pkvd->szValue);
 		return true;
 	}
 

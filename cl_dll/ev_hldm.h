@@ -22,6 +22,7 @@ void EV_FireMP5(event_args_t* args);
 void EV_FireM16(event_args_t* args);
 void EV_FireM162(event_args_t* args);
 void EV_FirePython(event_args_t* args);
+void EV_FireRevolver(event_args_t* args);
 void EV_FireGauss(event_args_t* args);
 void EV_SpinGauss(event_args_t* args);
 void EV_Crowbar(event_args_t* args);

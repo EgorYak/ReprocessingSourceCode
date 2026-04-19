@@ -182,7 +182,7 @@ void CHgun::PrimaryAttack()
 	if (recoil)
 	{
 		if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
-			KickBack(1.5, 0.65, 0.45, 0.125, 5.0, 3.5, 8);
+			KickBack(1.2, 0.65, 0.35, 0.125, 5.0, 3.5, 8);
 		else if (m_pPlayer->pev->velocity.Length2D() > 0)
 			KickBack(1.0, 0.5, 0.3, 0.06, 4.0, 3.0, 8);
 		else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))

@@ -811,6 +811,75 @@ void EV_FirePython(event_args_t* args)
 	Vector origin;
 	Vector angles;
 	Vector velocity;
+	bool empty;
+
+	Vector ShellVelocity;
+	Vector ShellOrigin;
+	int shell;
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex("models/556shell.mdl"); // brass shell
+
+	Vector vecSrc, vecAiming;
+	Vector up, right, forward;
+
+	idx = args->entindex;
+	VectorCopy(args->origin, origin);
+	VectorCopy(args->angles, angles);
+	VectorCopy(args->velocity, velocity);
+
+	empty = 0 != args->bparam1;
+	AngleVectors(angles, forward, right, up);
+
+	if (EV_IsLocal(idx))
+	{
+		// Python uses different body in multiplayer versus single player
+		bool multiplayer = gEngfuncs.GetMaxClients() != 1;
+
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		if (!empty)
+			gEngfuncs.pEventAPI->EV_WeaponAnimation(PYTHON_FIRE1 + gEngfuncs.pfnRandomLong(0, 1), multiplayer ? 1 : 0);
+		else
+			gEngfuncs.pEventAPI->EV_WeaponAnimation(PYTHON_FIRE_E, multiplayer ? 1 : 0);
+
+		V_PunchAxis(0, -10.0);
+	}
+
+	switch (gEngfuncs.pfnRandomLong(0, 1))
+	{
+	case 0:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/357_shot1.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
+		break;
+	case 1:
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/357_shot2.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
+		break;
+	}
+
+	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);
+	EV_EjectBrass(ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL);
+
+	EV_GetGunPosition(args, vecSrc, origin);
+	EV_HLDM_MuzzleFlash(vecSrc, 1.0 + gEngfuncs.pfnRandomFloat(-0.2, 0.2));
+	VectorCopy(forward, vecAiming);
+
+	EV_HLDM_FireBullets(idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_357, 0, &tracerCount[idx - 1], args->fparam1, args->fparam2);
+}
+//======================
+//	    PHYTON END
+//	     ( .357 )
+//======================
+
+//======================
+//	   REVOLVER START
+//	     ( .357 )
+//======================
+void EV_FireRevolver(event_args_t* args)
+{
+	int idx;
+	Vector origin;
+	Vector angles;
+	Vector velocity;
+	bool empty;
 
 	Vector vecSrc, vecAiming;
 	Vector up, right, forward;
@@ -829,7 +898,7 @@ void EV_FirePython(event_args_t* args)
 
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		gEngfuncs.pEventAPI->EV_WeaponAnimation(PYTHON_FIRE1 + gEngfuncs.pfnRandomLong(0, 1), multiplayer ? 1 : 0);
+		gEngfuncs.pEventAPI->EV_WeaponAnimation(REVOLVER_FIRE1, 0);
 
 		V_PunchAxis(0, -10.0);
 	}
@@ -837,10 +906,10 @@ void EV_FirePython(event_args_t* args)
 	switch (gEngfuncs.pfnRandomLong(0, 1))
 	{
 	case 0:
-		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/357_shot1.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/python_shot1.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
 		break;
 	case 1:
-		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/357_shot2.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/python_shot2.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM);
 		break;
 	}
 
@@ -851,7 +920,7 @@ void EV_FirePython(event_args_t* args)
 	EV_HLDM_FireBullets(idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_357, 0, &tracerCount[idx - 1], args->fparam1, args->fparam2);
 }
 //======================
-//	    PHYTON END
+//	    REVOLVER END
 //	     ( .357 )
 //======================
 

@@ -607,7 +607,8 @@ enum python_e
 	PYTHON_DRAW,
 	PYTHON_IDLE2,
 	PYTHON_IDLE3,
-	PYTHON_RELOAD_E
+	PYTHON_RELOAD_E,
+	PYTHON_FIRE_E
 };
 
 class CPython : public CBasePlayerWeapon
@@ -644,6 +645,46 @@ public:
 
 private:
 	unsigned short m_usFirePython;
+};
+
+enum revolver_e
+{
+	REVOLVER_IDLE1 = 0,
+	REVOLVER_FIDGET,
+	REVOLVER_FIRE1,
+	REVOLVER_RELOAD,
+	REVOLVER_HOLSTER,
+	REVOLVER_DRAW,
+	REVOLVER_IDLE2,
+	REVOLVER_IDLE3,
+	REVOLVER_DRAW_FIRST
+};
+
+class CRevolver : public CBasePlayerWeapon
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	int iItemSlot() override { return 2; }
+	bool GetItemInfo(ItemInfo* p) override;
+	void PrimaryAttack() override;
+	void SecondaryAttack() override;
+	bool Deploy() override;
+	void Holster() override;
+	void Reload() override;
+	void WeaponIdle() override;
+
+	bool UseDecrement() override
+	{
+#if defined(CLIENT_WEAPONS)
+		return true;
+#else
+		return false;
+#endif
+	}
+
+private:
+	unsigned short m_usFireRevolver;
 };
 
 enum mp5_e

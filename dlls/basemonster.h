@@ -104,6 +104,9 @@ public:
 
 	Vector m_HackedGunPos; // HACK until we can query end of gun
 
+	string_t m_iszKilledTrigger; // name of target that should be fired on kill.
+	string_t m_iszGibTrigger; // name of target that should be fired on kill.
+
 	// Scripted sequence Info
 	SCRIPTSTATE m_scriptState; // internal cinematic state
 	CCineMonster* m_pCine;

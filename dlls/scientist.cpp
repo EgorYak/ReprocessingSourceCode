@@ -1568,7 +1568,10 @@ void CMengele::Spawn()
 void CMengele::Precache()
 {
 	if (pev->model)
+	{
 		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC 
+		UTIL_PrecacheOther("item_healthkit");
+	}
 	else
 	{
 		if ((pev->spawnflags & SF_MONSTER_PREDISASTER) != 0)

@@ -308,6 +308,7 @@ void W_Precache()
 
 	// python
 	UTIL_PrecacheOtherWeapon("weapon_357");
+	UTIL_PrecacheOtherWeapon("weapon_python");
 	UTIL_PrecacheOther("ammo_357");
 
 	// gauss

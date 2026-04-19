@@ -22,7 +22,6 @@
 #include "gamerules.h"
 #include "UserMessages.h"
 
-LINK_ENTITY_TO_CLASS(weapon_python, CPython);
 LINK_ENTITY_TO_CLASS(weapon_357, CPython);
 
 bool CPython::GetItemInfo(ItemInfo* p)
@@ -204,7 +203,7 @@ void CPython::PrimaryAttack()
 	flags = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usFirePython, 0.0, g_vecZero, g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 0);
+	PLAYBACK_EVENT_FULL(flags, m_pPlayer->edict(), m_usFirePython, 0.0, g_vecZero, g_vecZero, vecDir.x, vecDir.y, 0, 0, (m_iClip == 0) ? 1 : 0, 0);
 
 	if (0 == m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition

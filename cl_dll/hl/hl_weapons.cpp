@@ -65,6 +65,7 @@ CSatchel g_Satchel;
 CTripmine g_Tripmine;
 CSqueak g_Snark;
 CM16 g_M16;
+CRevolver g_Revolver;
 
 
 /*
@@ -466,6 +467,7 @@ void HUD_InitClientWeapons()
 	HUD_PrepEntity(&g_Tripmine, &player);
 	HUD_PrepEntity(&g_Snark, &player);
 	HUD_PrepEntity(&g_M16, &player);
+	HUD_PrepEntity(&g_Revolver, &player);
 }
 
 /*
@@ -591,6 +593,10 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 
 	case WEAPON_M16:
 		pWeapon = &g_M16;
+		break;
+
+	case WEAPON_REVOLVER:
+		pWeapon = &g_Revolver;
 		break;
 	}
 

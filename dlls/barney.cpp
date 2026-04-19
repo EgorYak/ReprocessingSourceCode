@@ -1057,26 +1057,26 @@ void CEvilBarney::TalkInit()
 	m_szGrp[TLK_ANSWER] = "EB_IDLE";//"BA_ANSWER";
 	m_szGrp[TLK_QUESTION] = "EB_IDLE";//"BA_QUESTION";
 	m_szGrp[TLK_IDLE] = "EB_IDLE";
-	m_szGrp[TLK_STARE] = "BA_STARE";
-	m_szGrp[TLK_USE] = "BA_OK";
-	m_szGrp[TLK_UNUSE] = "BA_WAIT";
-	m_szGrp[TLK_STOP] = "BA_STOP";
+	m_szGrp[TLK_STARE] = "EB_STARE";
+	m_szGrp[TLK_USE] = "EB_OK";
+	m_szGrp[TLK_UNUSE] = "EB_WAIT";
+	m_szGrp[TLK_STOP] = "EB_STOP";
 
 	m_szGrp[TLK_NOSHOOT] = "EB_SCARED";
-	m_szGrp[TLK_HELLO] = "BA_HELLO";
+	m_szGrp[TLK_HELLO] = "EB_HELLO";
 
-	m_szGrp[TLK_PLHURT1] = "!BA_CUREA";
-	m_szGrp[TLK_PLHURT2] = "!BA_CUREB";
-	m_szGrp[TLK_PLHURT3] = "!BA_CUREC";
+	m_szGrp[TLK_PLHURT1] = "!EB_CUREA";
+	m_szGrp[TLK_PLHURT2] = "!EB_CUREB";
+	m_szGrp[TLK_PLHURT3] = "!EB_CUREC";
 
 	m_szGrp[TLK_PHELLO] = NULL;			  //"BA_PHELLO";		// UNDONE
 	m_szGrp[TLK_PIDLE] = NULL;			  //"BA_PIDLE";			// UNDONE
-	m_szGrp[TLK_PQUESTION] = "BA_PQUEST"; // UNDONE
+	m_szGrp[TLK_PQUESTION] = "EB_PQUEST"; // UNDONE
 
 	m_szGrp[TLK_SMELL] = "EB_SMELL";
 
-	m_szGrp[TLK_WOUND] = "BA_WOUND";
-	m_szGrp[TLK_MORTAL] = "BA_MORTAL";
+	m_szGrp[TLK_WOUND] = "EB_WOUND";
+	m_szGrp[TLK_MORTAL] = "EB_MORTAL";
 
 	// get voice for head - just one barney voice for now
 	m_voicePitch = 100;
@@ -1300,10 +1300,23 @@ public:
 
 	void GibMonster() override;
 
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
+
 	int m_iPose, m_iframe = -1; // which sequence to display	-- temporary, don't need to save
 	int m_iClassify = CLASS_PLAYER_ALLY, m_iBlood = BLOOD_COLOR_RED, m_iGib = 1;
-	static const char* m_szPoses[3];
 };
+
+TYPEDESCRIPTION CDeadMonster::m_SaveData[] =
+{
+	DEFINE_FIELD(CDeadMonster, m_iPose, FIELD_INTEGER),
+	DEFINE_FIELD(CDeadMonster, m_iframe, FIELD_INTEGER),
+	DEFINE_FIELD(CDeadMonster, m_iClassify, FIELD_INTEGER),
+	DEFINE_FIELD(CDeadMonster, m_iBlood, FIELD_INTEGER),
+};
+
+IMPLEMENT_SAVERESTORE(CDeadMonster, CBaseMonster);
 
 //=========================================================
 // GibMonster - create some gore and get rid of a monster's
@@ -1416,7 +1429,6 @@ public:
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 
 	void AlertSound() override;
-	void DeathSound() override;
 	void PainSound() override {};
 	Schedule_t* GetSchedule() override;
 
@@ -1551,28 +1563,6 @@ void CWashington::AlertSound()
 }
 
 //=========================================================
-// DeathSound
-//=========================================================
-void CWashington::DeathSound()
-{
-	switch (RANDOM_LONG(0, 3))
-	{
-	case 0:
-		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die1.wav", 1, ATTN_NORM, 0, GetVoicePitch());
-		break;
-	case 1:
-		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die2.wav", 1, ATTN_NORM, 0, GetVoicePitch());
-		break;
-	case 2:
-		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die3.wav", 1, ATTN_NORM, 0, GetVoicePitch());
-		break;
-	case 3:
-		EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "evilguards/die4.wav", 1, ATTN_NORM, 0, GetVoicePitch());
-		break;
-	}
-}
-
-//=========================================================
 // GetSchedule - Decides which type of schedule best suits
 // the monster's current state and conditions. Then calls
 // monster's member function to get a pointer to a schedule
@@ -1580,11 +1570,6 @@ void CWashington::DeathSound()
 //=========================================================
 Schedule_t* CWashington::GetSchedule()
 {
-	if (HasConditions(bits_COND_ENEMY_DEAD) && FOkToSpeak())
-	{
-		PlaySentence("EB_KILL", 4, VOL_NORM, ATTN_NORM);
-	}
-
 	return CBarney::GetSchedule();
 }
 

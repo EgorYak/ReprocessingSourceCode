@@ -298,6 +298,8 @@ void CSubtitle::paintBackground()
 		}
 		else if (m_pCur->m_bRadio)
 			gHUD.m_bRadio = true;
+		else
+			gHUD.m_bRadio = false;
 	}
 
 	if (m_pWait)

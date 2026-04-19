@@ -131,6 +131,9 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 		DEFINE_FIELD(CBaseMonster, m_pCine, FIELD_CLASSPTR),
 		DEFINE_FIELD(CBaseMonster, m_AllowItemDropping, FIELD_BOOLEAN),
 
+		DEFINE_FIELD(CBaseMonster, m_iszKilledTrigger, FIELD_STRING),
+		DEFINE_FIELD(CBaseMonster, m_iszGibTrigger, FIELD_STRING),
+
 		#ifdef GATESEQ
 		// ku2zoff
 		DEFINE_FIELD(CBaseMonster, m_actionActivity, FIELD_INTEGER),
@@ -3497,6 +3500,14 @@ bool CBaseMonster::KeyValue(KeyValueData* pkvd)
 	else if (FStrEq(pkvd->szKeyName, "allow_item_dropping"))
 	{
 		m_AllowItemDropping = atoi(pkvd->szValue) != 0;
+	}
+	else if (FStrEq(pkvd->szKeyName, "on_killed_trigger"))
+	{
+		m_iszKilledTrigger = ALLOC_STRING(pkvd->szValue);
+	}
+	else if (FStrEq(pkvd->szKeyName, "on_gib_trigger"))
+	{
+		m_iszGibTrigger = ALLOC_STRING(pkvd->szValue);
 	}
 
 	return CBaseToggle::KeyValue(pkvd);

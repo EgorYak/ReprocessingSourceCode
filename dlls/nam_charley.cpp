@@ -31,14 +31,13 @@
 //=========================================================
 // Monster's Anim Events Go Here
 //=========================================================
-#define	ZOMBIE_AE_ATTACK_RIGHT			0x01
-#define	ZOMBIE_AE_ATTACK_LEFT			0x02
-#define	ZOMBIE_AE_ATTACK_GUTS_GRAB		0x03
-#define ZOMBIE_AE_ATTACK_GUTS_THROW		4
-#define GONOME_AE_ATTACK_BITE_FIRST		19
-#define GONOME_AE_ATTACK_BITE_SECOND	20
-#define GONOME_AE_ATTACK_BITE_THIRD		21
-#define GONOME_AE_ATTACK_BITE_FINISH	22
+#define	VC_AE_ATTACK_RIGHT			0x01
+#define	VC_AE_ATTACK_LEFT			0x02
+#define	ZOMBIE_AE_ATTACK_SKS_SHOOT		0x03
+#define GONOME_AE_ATTACK_SLASH_FIRST		19
+#define GONOME_AE_ATTACK_SLASH_SECOND	20
+#define GONOME_AE_ATTACK_SLASH_THIRD		21
+#define GONOME_AE_ATTACK_SLASH_FINISH	22
 
 #define ZOMBIE_FLINCH_DELAY			2		// at most one flinch every n secs
 
@@ -105,10 +104,10 @@ void CNamBullet::Touch( CBaseEntity *pOther )
 	switch( RANDOM_LONG( 0, 1 ) )
 	{
 	case 0:
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/bullet_hit1.wav", 1, ATTN_NORM, 0, iPitch );
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "weapons/bullet_hit1.wav", 1, ATTN_NORM, 0, iPitch );
 		break;
 	case 1:
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/bullet_hit2.wav", 1, ATTN_NORM, 0, iPitch );
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, "weapons/bullet_hit2.wav", 1, ATTN_NORM, 0, iPitch );
 		break;
 	}
 
@@ -172,7 +171,6 @@ void CNamBullet::Launch( entvars_t* pevOwner, Vector vecStart, Vector vecVelocit
 {
 	UTIL_SetOrigin( pev, vecStart );
 	pev->velocity = vecVelocity;
-	pev->owner = ENT( pevOwner );
 
 	SetThink( &CNamBullet::Animate );
 	pev->nextthink = gpGlobals->time + 0.1;
@@ -187,8 +185,6 @@ enum
 class CNamCharlie : public CBaseMonster
 {
 public:
-	using BaseClass = CBaseMonster;
-
 	bool Save( CSave &save ) override;
 	bool Restore( CRestore &restore ) override;
 
@@ -200,6 +196,8 @@ public:
 	int  Classify () override;
 	void HandleAnimEvent( MonsterEvent_t *pEvent ) override;
 	int IgnoreConditions () override;
+
+	void Shoot();
 
 	void PainSound() override;
 	void AlertSound() override;
@@ -218,11 +216,7 @@ public:
 
 	Schedule_t* GetScheduleOfType( int Type ) override;
 
-	void Killed( entvars_t* pevAttacker, int iGib ) override;
-
-	void StartTask( Task_t* pTask ) override;
-
-	void SetActivity( Activity NewActivity ) override;
+	//void SetActivity(Activity NewActivity);
 
 	CUSTOM_SCHEDULES;
 
@@ -230,20 +224,15 @@ public:
 	float m_flNextThrowTime;
 
 	int m_iBrassShell;
-
-	//TODO: needs to be EHANDLE, save/restored or a save during a windup will cause problems
-	CNamBullet* m_pGonomeGuts;
-	bool m_fPlayerLocked;
 };
 
 TYPEDESCRIPTION	CNamCharlie::m_SaveData[] =
 {
 	DEFINE_FIELD( CNamCharlie, m_flNextFlinch, FIELD_TIME ),
 	DEFINE_FIELD( CNamCharlie, m_flNextThrowTime, FIELD_TIME ),
-	DEFINE_FIELD( CNamCharlie, m_fPlayerLocked, FIELD_BOOLEAN ),
 };
 
-IMPLEMENT_SAVERESTORE( CNamCharlie, CNamCharlie::BaseClass );
+IMPLEMENT_SAVERESTORE( CNamCharlie, CBaseMonster );
 
 LINK_ENTITY_TO_CLASS( monster_nam_charlie, CNamCharlie );
 
@@ -317,12 +306,6 @@ void CNamCharlie :: SetYawSpeed ()
 
 	ys = 120;
 
-#if 0
-	switch ( m_Activity )
-	{
-	}
-#endif
-
 	pev->yaw_speed = ys;
 }
 
@@ -339,10 +322,10 @@ void CNamCharlie :: PainSound()
 	switch (RANDOM_LONG(0, 1))
 	{
 	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert1.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert1.wav", 1, ATTN_IDLE);
 		break;
 	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert2.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert2.wav", 1, ATTN_IDLE);
 		break;
 	}
 }
@@ -352,10 +335,10 @@ void CNamCharlie :: AlertSound()
 	switch (RANDOM_LONG(0, 1))
 	{
 	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert1.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert1.wav", 1, ATTN_IDLE);
 		break;
 	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/alert2.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert2.wav", 1, ATTN_IDLE);
 		break;
 	}
 }
@@ -365,13 +348,13 @@ void CNamCharlie :: IdleSound()
 	switch (RANDOM_LONG(0, 2))
 	{
 	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle1.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle1.wav", 1, ATTN_IDLE);
 		break;
 	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle2.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle2.wav", 1, ATTN_IDLE);
 		break;
 	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/idle3.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle3.wav", 1, ATTN_IDLE);
 		break;
 	}
 }
@@ -381,15 +364,49 @@ void CNamCharlie::DeathSound()
 	switch (RANDOM_LONG(0, 2))
 	{
 	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/die1.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die1.wav", 1, ATTN_IDLE);
 		break;
 	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/die2.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die2.wav", 1, ATTN_IDLE);
 		break;
 	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "gook/die3.wav", 1, ATTN_IDLE);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die3.wav", 1, ATTN_IDLE);
 		break;
 	}
+}
+
+void CNamCharlie::Shoot()
+{
+	switch (RANDOM_LONG(0, 1))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
+		break;
+	}
+
+	if (m_hEnemy == NULL)
+	{
+		return;
+	}
+
+	Vector vecShootOrigin = GetGunPosition();
+	Vector vecShootDir = ShootAtEnemy(vecShootOrigin);
+
+	UTIL_MakeVectors(pev->angles);
+
+	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40, 90) + gpGlobals->v_up * RANDOM_FLOAT(75, 200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
+	EjectBrass(vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iBrassShell, TE_BOUNCE_SHELL);
+
+	pev->effects |= EF_MUZZLEFLASH;
+
+	Vector angDir = UTIL_VecToAngles(vecShootDir);
+	SetBlending(0, angDir.x);
+
+	CNamBullet* pBullet = CNamBullet::GonomeGutsCreate(vecShootOrigin);
+	pBullet->Launch(pev, vecShootOrigin, vecShootDir * 900);
 }
 
 //=========================================================
@@ -400,7 +417,7 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 {
 	switch( pEvent->event )
 	{
-		case ZOMBIE_AE_ATTACK_RIGHT:
+		case VC_AE_ATTACK_RIGHT:
 		{
 			// do stuff for this event.
 	//		ALERT( at_console, "Slash right!\n" );
@@ -414,14 +431,14 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					pHurt->pev->velocity = pHurt->pev->velocity - gpGlobals->v_right * 25;
 				}
 				// Play a random attack hit sound
-				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 			}
 			else // Play a random attack miss sound
-				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 		}
 		break;
 
-		case ZOMBIE_AE_ATTACK_LEFT:
+		case VC_AE_ATTACK_LEFT:
 		{
 			// do stuff for this event.
 	//		ALERT( at_console, "Slash left!\n" );
@@ -434,87 +451,24 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					pHurt->pev->punchangle.x = 5;
 					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 25;
 				}
-				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 			}
 			else
-				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 		}
 		break;
 
-		case ZOMBIE_AE_ATTACK_GUTS_GRAB:
-		case ZOMBIE_AE_ATTACK_GUTS_THROW:
+		case ZOMBIE_AE_ATTACK_SKS_SHOOT:
+		case 4:
 			{
-				//Note: this check wasn't in the original. If an enemy dies during gut throw windup, this can be null and crash
-				if( m_hEnemy )
-				{
-					switch (RANDOM_LONG(0, 1))
-					{
-					case 0:
-						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
-						break;
-					case 1:
-						EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
-						break;
-					}
-					Vector vecGutsPos, vecGutsAngles;
-					GetAttachment( 0, vecGutsPos, vecGutsAngles );
-					Vector vecShootOrigin = GetGunPosition();
-					Vector vecShootDir = ShootAtEnemy(vecShootOrigin);
-
-					UTIL_MakeVectors( pev->angles );
-
-					if( !m_pGonomeGuts )
-					{
-						m_pGonomeGuts = CNamBullet::GonomeGutsCreate( vecGutsPos );
-					}
-
-					Vector vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40, 90) + gpGlobals->v_up * RANDOM_FLOAT(75, 200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
-					EjectBrass(vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iBrassShell, TE_BOUNCE_SHELL);
-
-					auto direction = ( m_hEnemy->pev->origin - m_hEnemy->pev->view_ofs - vecGutsPos ).Normalize();
-
-					direction = direction + Vector(
-						RANDOM_FLOAT( -0.05, 0.05 ),
-						RANDOM_FLOAT( -0.05, 0.05 ),
-						RANDOM_FLOAT( -0.05, 0 ) );
-
-					//Detach from owner
-					m_pGonomeGuts->pev->skin = 0;
-					m_pGonomeGuts->pev->body = 0;
-					m_pGonomeGuts->pev->aiment = nullptr;
-					m_pGonomeGuts->pev->movetype = MOVETYPE_FLY;
-
-					pev->effects |= EF_MUZZLEFLASH;
-
-					m_pGonomeGuts->Launch( pev, vecGutsPos, direction * 900 );
-					Vector angDir = UTIL_VecToAngles(vecShootDir);
-					SetBlending(0, angDir.x);
-				}
-				else
-				{
-					UTIL_Remove( m_pGonomeGuts );
-				}
-
-				m_pGonomeGuts = nullptr;
+				Shoot();
 			}
 			break;
 
-		case GONOME_AE_ATTACK_BITE_FIRST:
-		case GONOME_AE_ATTACK_BITE_SECOND:
-		case GONOME_AE_ATTACK_BITE_THIRD:
+		case GONOME_AE_ATTACK_SLASH_FIRST:
+		case GONOME_AE_ATTACK_SLASH_SECOND:
+		case GONOME_AE_ATTACK_SLASH_THIRD:
 			{
-				//TODO: this doesn't check if the enemy is the player, can cause bugs
-				if( ( pev->origin - m_hEnemy->pev->origin ).Length() < 48 )
-				{
-					//TODO: not suited for multiplayer
-					auto pPlayer = static_cast<CBasePlayer*>( UTIL_FindEntityByClassname( nullptr, "player" ) );
-
-					if( pPlayer && pPlayer->IsAlive() )
-						pPlayer->EnableControl( false );
-
-					m_fPlayerLocked = true;
-				}
-
 				// do stuff for this event.
 	//		ALERT( at_console, "Slash left!\n" );
 				CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.gonomeDmgOneBite, DMG_SLASH );
@@ -525,24 +479,15 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 						pHurt->pev->punchangle.x = 9;
 						pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 25;
 					}
-					EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackHitSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
+					EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, pAttackHitSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackHitSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
 				}
 				else
-					EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackMissSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
+					EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, pAttackMissSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackMissSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
 			}
 			break;
 
-		case GONOME_AE_ATTACK_BITE_FINISH:
+		case GONOME_AE_ATTACK_SLASH_FINISH:
 			{
-				auto pPlayer = static_cast<CBasePlayer*>( UTIL_FindEntityByClassname( nullptr, "player" ) );
-
-				if( pPlayer && pPlayer->IsAlive() )
-				{
-					pPlayer->EnableControl( true );
-				}
-
-				m_fPlayerLocked = false;
-
 				// do stuff for this event.
 	//		ALERT( at_console, "Slash left!\n" );
 				CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.gonomeDmgOneBite, DMG_SLASH );
@@ -553,10 +498,10 @@ void CNamCharlie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 						pHurt->pev->punchangle.x = 9;
 						pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 25;
 					}
-					EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackHitSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
+					EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, pAttackHitSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackHitSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
 				}
 				else
-					EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackMissSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
+					EMIT_SOUND_DYN( ENT( pev ), CHAN_BODY, pAttackMissSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackMissSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG( -5, 5 ) );
 			}
 			break;
 
@@ -586,8 +531,6 @@ void CNamCharlie :: Spawn()
 	m_afCapability		= bits_CAP_DOORS_GROUP;
 
 	m_flNextThrowTime = gpGlobals->time;
-	m_pGonomeGuts = nullptr;
-	m_fPlayerLocked = false;
 
 	MonsterInit();
 }
@@ -608,16 +551,16 @@ void CNamCharlie :: Precache()
 	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
 
-	PRECACHE_SOUND( "gook/die1.wav" );
-	PRECACHE_SOUND( "gook/die2.wav" );
-	PRECACHE_SOUND( "gook/die3.wav" );
+	PRECACHE_SOUND( "vc/die1.wav" );
+	PRECACHE_SOUND( "vc/die2.wav" );
+	PRECACHE_SOUND( "vc/die3.wav" );
 
-	PRECACHE_SOUND("gook/alert1.wav");
-	PRECACHE_SOUND("gook/alert2.wav");
+	PRECACHE_SOUND("vc/alert1.wav");
+	PRECACHE_SOUND("vc/alert2.wav");
 
-	PRECACHE_SOUND("gook/idle1.wav");
-	PRECACHE_SOUND("gook/idle2.wav");
-	PRECACHE_SOUND("gook/idle3.wav");
+	PRECACHE_SOUND("vc/idle1.wav");
+	PRECACHE_SOUND("vc/idle2.wav");
+	PRECACHE_SOUND("vc/idle3.wav");
 
 	PRECACHE_SOUND("gonome/gonome_step1.wav");
 	PRECACHE_SOUND("gonome/gonome_step2.wav");
@@ -639,7 +582,7 @@ int CNamCharlie::IgnoreConditions ()
 
 	if( m_Activity == ACT_RANGE_ATTACK1 )
 	{
-		iIgnore |= bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE | bits_COND_ENEMY_TOOFAR | bits_COND_ENEMY_OCCLUDED;
+		iIgnore |= bits_COND_LIGHT_DAMAGE | bits_COND_HEAVY_DAMAGE;
 	}
 	else if ((m_Activity == ACT_MELEE_ATTACK1) || (m_Activity == ACT_MELEE_ATTACK1))
 	{
@@ -674,17 +617,10 @@ bool CNamCharlie::CheckMeleeAttack1( float flDot, float flDist )
 
 bool CNamCharlie::CheckRangeAttack1( float flDot, float flDist )
 {
-	if( flDist < 256.0 )
-		return false;
-
-	if( IsMoving() && flDist >= 512.0 )
-	{
-		return false;
-	}
-
+	return false;
 	if( flDist > 64.0 && flDist <= 784.0 && flDot >= 0.5 && gpGlobals->time >= m_flNextThrowTime )
 	{
-		if( !m_hEnemy || ( fabs( pev->origin.z - m_hEnemy->pev->origin.z ) <= 256.0 ) )
+		if( m_hEnemy )
 		{
 			if( IsMoving() )
 			{
@@ -692,9 +628,8 @@ bool CNamCharlie::CheckRangeAttack1( float flDot, float flDist )
 			}
 			else
 			{
-				m_flNextThrowTime = gpGlobals->time + 0.5;
+				m_flNextThrowTime = gpGlobals->time + 3.5;
 			}
-
 			return true;
 		}
 	}
@@ -710,80 +645,35 @@ Schedule_t* CNamCharlie::GetScheduleOfType( int Type )
 		return CBaseMonster::GetScheduleOfType( Type );
 }
 
-void CNamCharlie::Killed( entvars_t* pevAttacker, int iGib )
+/*
+void CNamCharlie::SetActivity(Activity NewActivity)
 {
-	if( m_pGonomeGuts )
+	int iSequence = ACTIVITY_NOT_AVAILABLE;
+	void* pmodel = GET_MODEL_PTR(ENT(pev));
+
+	switch (NewActivity)
 	{
-		UTIL_Remove( m_pGonomeGuts);
-		m_pGonomeGuts = nullptr;
-	}
-
-	if( m_fPlayerLocked )
-	{
-		//TODO: not suited for multiplayer
-		auto pPlayer = static_cast<CBasePlayer*>( UTIL_FindEntityByClassname( nullptr, "player" ) );
-
-		if( pPlayer && pPlayer->IsAlive() )
-			pPlayer->EnableControl( true );
-
-		m_fPlayerLocked = false;
-	}
-
-	CBaseMonster::Killed( pevAttacker, iGib );
-}
-
-void CNamCharlie::StartTask( Task_t* pTask )
-{
-	switch( pTask->iTask )
-	{
-	case TASK_GONOME_GET_PATH_TO_ENEMY_CORPSE:
-		{
-			if( m_pGonomeGuts )
-			{
-				UTIL_Remove( m_pGonomeGuts );
-				m_pGonomeGuts = nullptr;
-			}
-
-			UTIL_MakeVectors( pev->angles );
-
-			if( BuildRoute( m_vecEnemyLKP - 64 * gpGlobals->v_forward, 64, nullptr ) )
-			{
-				TaskComplete();
-			}
-			else
-			{
-				ALERT( at_aiconsole, "GonomeGetPathToEnemyCorpse failed!!\n" );
-				TaskFail();
-			}
-		}
-		break;
-
 	default:
-		CBaseMonster::StartTask( pTask );
+		iSequence = LookupActivity(NewActivity);
 		break;
 	}
-}
 
-void CNamCharlie::SetActivity( Activity NewActivity )
-{
-	if( NewActivity != ACT_RANGE_ATTACK1 && m_pGonomeGuts )
+	if (iSequence > ACTIVITY_NOT_AVAILABLE)
 	{
-		UTIL_Remove( m_pGonomeGuts );
-		m_pGonomeGuts = nullptr;
+		if (pev->sequence != iSequence || !m_fSequenceLoops)
+			pev->frame = 0;
+
+		pev->sequence = iSequence;
+		ResetSequenceInfo();
+		SetYawSpeed();
+	}
+	else
+	{
+		ALERT(at_console, "%s has no sequence for act:%d\n", STRING(pev->classname), NewActivity);
+		pev->sequence = 0;
 	}
 
-	if( m_fPlayerLocked )
-	{
-		if( NewActivity != ACT_MELEE_ATTACK1 )
-		{
-			auto pPlayer = static_cast<CBasePlayer*>( UTIL_FindEntityByClassname( nullptr, "player" ) );
-
-			if( pPlayer && pPlayer->IsAlive() )
-				pPlayer->EnableControl( true );
-
-			m_fPlayerLocked = false;
-		}
-	}
-
-	CBaseMonster::SetActivity(NewActivity);
+	m_Activity = NewActivity;
+	m_IdealActivity = NewActivity;
 }
+*/

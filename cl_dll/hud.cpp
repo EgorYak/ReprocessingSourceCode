@@ -497,6 +497,8 @@ void CHud::VidInit()
 
 	//gSoundEngine.ResetEngine();
 
+	m_bRadio = false;
+
 	m_iFakeMonsCount = 0;
 
 	if (ScreenWidth < 640)

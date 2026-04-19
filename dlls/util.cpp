@@ -2752,6 +2752,7 @@ static TITLECOMMENT gTitleComments[] =
 	{ "ch4s0",        "#C2A1TITLE" },
 	{ "b0a0",        "#C2A2TITLE" },
 	{ "b1a0",        "#C2A2TITLE" },
+	{ "shock",        "#T0A0TITLE" },
 	{ "end",        "#C2A4TITLE1" }
 };
 
