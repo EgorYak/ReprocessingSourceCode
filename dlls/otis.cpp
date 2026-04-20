@@ -487,7 +487,7 @@ void COtis::Precache()
 	PRECACHE_SOUND("barney/ba_attack1.wav");
 	PRECACHE_SOUND("barney/ba_attack2.wav");
 
-	PRECACHE_SOUND("weapons/de_shot1.wav");
+	//PRECACHE_SOUND("weapons/de_shot1.wav");
 
 	PRECACHE_SOUND("barney/ba_pain1.wav");
 	PRECACHE_SOUND("barney/ba_pain2.wav");
