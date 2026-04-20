@@ -1313,6 +1313,8 @@ public:
 	void PrescheduleThink() override;
 	void PainSound() override;
 	void IdleSound() override;
+
+	int m_iBodyGibs;
 };
 LINK_ENTITY_TO_CLASS(monster_nam_rat, CNamRat);
 
@@ -1404,6 +1406,8 @@ void CNamRat::Precache()
 {
 	PRECACHE_MODEL("models/hell_rat.mdl");
 
+	m_iBodyGibs = PRECACHE_MODEL("models/metalplategibs_green.mdl");
+
 	PRECACHE_SOUND("rat/ratalert1.wav");
 	PRECACHE_SOUND("rat/ratalert2.wav");
 	PRECACHE_SOUND("rat/ratalert3.wav");
@@ -1455,6 +1459,43 @@ void CNamRat::IdleSound()
 void CNamRat::WarmUpSound()
 {
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/grenade_pinpull.wav", 0.7, ATTN_NORM);
+	pev->body = 1;
+
+	Vector vecSpot = pev->origin + (pev->mins + pev->maxs) * 0.5;
+	MESSAGE_BEGIN(MSG_PVS, SVC_TEMPENTITY, vecSpot);
+	WRITE_BYTE(TE_BREAKMODEL);
+
+	// position
+	WRITE_COORD(vecSpot.x);
+	WRITE_COORD(vecSpot.y);
+	WRITE_COORD(vecSpot.z);
+
+	// size
+	WRITE_COORD(400);
+	WRITE_COORD(400);
+	WRITE_COORD(132);
+
+	// velocity
+	WRITE_COORD(pev->velocity.x);
+	WRITE_COORD(pev->velocity.y);
+	WRITE_COORD(pev->velocity.z);
+
+	// randomization
+	WRITE_BYTE(50);
+
+	// Model
+	WRITE_SHORT(m_iBodyGibs); //model id#
+
+	// # of shards
+	WRITE_BYTE(4); // let client decide
+
+	// duration
+	WRITE_BYTE(30); // 3.0 seconds
+
+	// flags
+
+	WRITE_BYTE(BREAK_METAL);
+	MESSAGE_END();
 }
 
 //=========================================================
