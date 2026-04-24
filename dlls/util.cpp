@@ -2746,7 +2746,7 @@ static TITLECOMMENT gTitleComments[] =
 {
 	{ "ch0s0",        "#C1A1TITLE" },
 	{ "ch1s0",    "#C1A2TITLE" },
-	{ "ch2s0",    "#C1A2TITLE" },
+	{ "ch2s0",    "#C2A2TITLE" },
 	{ "ch3s0",        "#C1A3TITLE" },
 	{ "ch3s1",        "#C1A4TITLE" },
 	{ "ch4s0",        "#C2A1TITLE" },

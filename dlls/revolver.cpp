@@ -187,13 +187,14 @@ void CRevolver::WeaponIdle()
 	if (flRand <= 0.5)
 	{
 		iAnim = PYTHON_FIDGET;
-		m_flTimeWeaponIdle = (70.0 / 30.0);
+		//m_flTimeWeaponIdle = (2.37);
 	}
 	else
 	{
 		iAnim = PYTHON_IDLE1;
-		m_flTimeWeaponIdle = (170.0 / 30.0);
+		//m_flTimeWeaponIdle = (5.7);
 	}
 
 	SendWeaponAnim(iAnim, 0);
+	m_flTimeWeaponIdle = UTIL_SharedRandomFloat(m_pPlayer->random_seed, 10, 15); // how long till we do this again.
 }

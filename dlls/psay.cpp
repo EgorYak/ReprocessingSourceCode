@@ -88,9 +88,11 @@ void CPlayerSay::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE use
 	CBaseEntity* pPlayer = NULL;
 	//pPlayer = UTIL_FindEntityGeneric(, pev->origin, 4096);
 	pPlayer = UTIL_GetLocalPlayer();
-	if (pPlayer)
+	if (pPlayer && pPlayer->IsAlive())
+	{
 		EMIT_SOUND(ENT(pPlayer->pev), CHAN_VOICE, szSoundFile, VOL_NORM, ATTN_NORM);
-	UTIL_ShowMessagePVS(STRING(m_iszSentence), pPlayer->pev->origin);
+		UTIL_ShowMessagePVS(STRING(m_iszSentence), pPlayer->pev->origin);
+	}
 	/*
 		if ((pev->spawnflags & SF_SAY_SUIT) == 0)
 			EMIT_SOUND(ENT(pPlayer->pev), CHAN_VOICE, szSoundFile, VOL_NORM, ATTN_NORM);

@@ -2669,3 +2669,273 @@ void CTriggerCamera::Move()
 	float fraction = 2 * gpGlobals->frametime;
 	pev->velocity = ((pev->movedir * pev->speed) * fraction) + (pev->velocity * (1 - fraction));
 }
+
+#include "effects.h"
+#include "weapons.h"
+
+#define TELEFRAG_SPAWN_BEAM_COUNT 6
+#define SF_NOFRAG 8 // also for scene on ch1s0e
+
+// Special for ch1s0e scene
+class CTriggerTelefrag : public CBaseDelay
+{
+public:
+	bool KeyValue(KeyValueData* pkvd) override;
+	void Spawn() override;
+	void Precache() override;
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+
+	int ObjectCaps() override { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+
+	void CreateWarpBeams(int side);
+
+	static TYPEDESCRIPTION m_SaveData[];
+
+	void EXPORT TelefragThink();
+	void EXPORT ClearThink();
+
+private:
+	int m_iszMonster;
+	string_t m_iszMonsterClassname; // classname of the monster(s) that will be created.
+
+	CBeam* m_pBeam[TELEFRAG_SPAWN_BEAM_COUNT];
+	int m_iBeams;
+
+	//float m_flKillTime;
+};
+LINK_ENTITY_TO_CLASS(trigger_telefrag, CTriggerTelefrag);
+
+TYPEDESCRIPTION CTriggerTelefrag::m_SaveData[] =
+{
+	DEFINE_FIELD(CTriggerTelefrag, m_iszMonster, FIELD_STRING),
+	DEFINE_FIELD(CTriggerTelefrag, m_iszMonsterClassname, FIELD_STRING),
+	DEFINE_ARRAY(CTriggerTelefrag, m_pBeam, FIELD_CLASSPTR, TELEFRAG_SPAWN_BEAM_COUNT),
+	DEFINE_FIELD(CTriggerTelefrag, m_iBeams, FIELD_INTEGER),
+	//DEFINE_FIELD(CTriggerTelefrag, m_flKillTime, FIELD_TIME),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerTelefrag, CBaseDelay);
+
+bool CTriggerTelefrag::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "targmonster"))
+	{
+		m_iszMonster = ALLOC_STRING(pkvd->szValue);
+		return true;
+	}
+	else if (FStrEq(pkvd->szKeyName, "createmonster"))
+	{
+		m_iszMonsterClassname = ALLOC_STRING(pkvd->szValue);
+		return true;
+	}
+
+	return CBaseDelay::KeyValue(pkvd);
+}
+
+
+void CTriggerTelefrag::Spawn()
+{
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NONE;
+	pev->effects = EF_NODRAW;
+	pev->frame = 0;
+
+	Precache();
+
+	if ((pev->spawnflags & SF_NOFRAG) == 0)
+		SET_MODEL(edict(), "sprites/tele1.spr");
+	else
+		SET_MODEL(edict(), "sprites/bexplo.spr");
+	pev->rendercolor.x = 0;
+	pev->rendercolor.y = 128;
+	pev->rendercolor.z = 0;
+
+	UTIL_SetOrigin(pev, pev->origin);
+
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
+
+	if (pev->angles.y != 0 && pev->angles.z == 0)
+	{
+		pev->angles.z = pev->angles.y;
+		pev->angles.y = 0;
+	}
+
+	for (auto& pBeam : m_pBeam)
+	{
+		pBeam = nullptr;
+	}
+
+	m_iBeams = 0;
+}
+
+void CTriggerTelefrag::Precache()
+{
+	if ((pev->spawnflags & SF_NOFRAG) == 0)
+		PRECACHE_MODEL("sprites/tele1.spr");
+	else
+		PRECACHE_MODEL("sprites/bexplo.spr");
+	PRECACHE_SOUND("debris/beamstart2.wav");
+	PRECACHE_MODEL("sprites/lgtning.spr");
+
+	UTIL_PrecacheOther(STRING(m_iszMonsterClassname));
+}
+
+void CTriggerTelefrag::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	edict_t* pentTarget;
+	edict_t* pent;
+	entvars_t* pevCreate;
+
+	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(m_iszMonster));
+	CBaseMonster* pTarget = NULL;
+
+	while (!FNullEnt(pentTarget))
+	{
+		if (FBitSet(VARS(pentTarget)->flags, FL_MONSTER))
+		{
+			pTarget = GetMonsterPointer(pentTarget);
+			Vector mon_org = pTarget->pev->origin;
+			pev->origin = pTarget->Center();
+			pev->angles = pTarget->pev->angles;
+
+			CreateWarpBeams(1);
+			CreateWarpBeams(-1);
+			CreateWarpBeams(1);
+			CreateWarpBeams(-1);
+			CreateWarpBeams(1);
+			CreateWarpBeams(-1);
+			EMIT_SOUND(edict(), CHAN_WEAPON, "debris/beamstart2.wav", VOL_NORM, ATTN_NORM);
+
+			MESSAGE_BEGIN(MSG_BROADCAST, SVC_TEMPENTITY);
+			WRITE_BYTE(TE_DLIGHT);
+			WRITE_COORD(pev->origin.x);	// X
+			WRITE_COORD(pev->origin.y);	// Y
+			WRITE_COORD(pev->origin.z);	// Z
+			WRITE_BYTE(20);		// radius * 0.1
+			WRITE_BYTE(0);		// r
+			WRITE_BYTE(214);	// g
+			WRITE_BYTE(0);		// b
+			WRITE_BYTE(10);		// time * 10
+			WRITE_BYTE(8);		// decay * 0.1
+			MESSAGE_END();
+
+			pev->effects &= ~EF_NODRAW;
+			pev->rendermode = kRenderTransAdd;
+			pev->renderamt = 255;
+
+			if ((pev->spawnflags & SF_NOFRAG) == 0)
+			{
+				pTarget->DeathSound();
+				pTarget->GibMonster();
+				UTIL_ScreenShake(pev->origin, 15, 1.5, 1, 200);
+
+				pent = CREATE_NAMED_ENTITY(m_iszMonsterClassname);
+				if (FNullEnt(pent))
+				{
+					ALERT(at_console, "NULL Ent in MonsterMaker!\n");
+					return;
+				}
+
+				// If I have a target, fire!
+				if (!FStringNull(pev->target))
+				{
+					// delay already overloaded for this entity, so can't call SUB_UseTargets()
+					FireTargets(STRING(pev->target), this, this, USE_TOGGLE, 0);
+				}
+
+				pevCreate = VARS(pent);
+				pevCreate->origin = pev->origin;
+				pevCreate->angles = pev->angles;
+				SetBits(pevCreate->spawnflags, SF_MONSTER_FALL_TO_GROUND);
+
+				// Children hit monsterclip brushes
+				if ((pev->spawnflags & SF_MONSTER_HITMONSTERCLIP) != 0)
+					SetBits(pevCreate->spawnflags, SF_MONSTER_HITMONSTERCLIP);
+
+				DispatchSpawn(ENT(pevCreate));
+				pevCreate->owner = edict();
+
+				if (!FStringNull(pev->netname))
+				{
+					// if I have a netname (overloaded), give the child monster that name as a targetname
+					pevCreate->targetname = pev->netname;
+				}
+			}
+			pev->nextthink = gpGlobals->time + 0.1;
+			SetThink(&CTriggerTelefrag::TelefragThink);
+		}
+		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(m_iszMonster));
+		pTarget = NULL;
+	}
+	pTarget = NULL;
+}
+
+void CTriggerTelefrag::CreateWarpBeams(int side)
+{
+	TraceResult tr;
+	float flDist = 1.0;
+
+	if (m_iBeams >= TELEFRAG_SPAWN_BEAM_COUNT)
+		return;
+
+	UTIL_MakeAimVectors(pev->angles);
+	Vector vecSrc = pev->origin + gpGlobals->v_up * 36 + gpGlobals->v_right * side * 16 + gpGlobals->v_forward * 32;
+
+	for (int i = 0; i < 3; i++)
+	{
+		Vector vecAim = gpGlobals->v_right * side * RANDOM_FLOAT(0, 1) + gpGlobals->v_up * RANDOM_FLOAT(-1, 1);
+		TraceResult tr1;
+		UTIL_TraceLine(vecSrc, vecSrc + vecAim * 512, ignore_monsters, ENT(pev), &tr1);
+		if (flDist > tr1.flFraction)
+		{
+			tr = tr1;
+			flDist = tr.flFraction;
+		}
+	}
+
+	// Couldn't find anything close enough
+	if (flDist == 1.0)
+		return;
+
+	DecalGunshot(&tr, BULLET_PLAYER_CROWBAR);
+
+	m_pBeam[m_iBeams] = CBeam::BeamCreate("sprites/lgtning.spr", 30);
+	if (!m_pBeam[m_iBeams])
+		return;
+
+	m_pBeam[m_iBeams]->PointEntInit(tr.vecEndPos, entindex());
+	m_pBeam[m_iBeams]->SetColor(0, 255, 0);
+	m_pBeam[m_iBeams]->SetBrightness(192);
+	m_pBeam[m_iBeams]->SetNoise(80);
+
+	m_pBeam[m_iBeams]->SetThink(&CBeam::SUB_Remove);
+	m_pBeam[m_iBeams]->pev->nextthink = gpGlobals->time + 1;
+
+	++m_iBeams;
+}
+
+void CTriggerTelefrag::TelefragThink()
+{
+	pev->nextthink = gpGlobals->time + 0.5;
+
+	SetThink(&CTriggerTelefrag::SUB_Remove);
+}
+
+//=========================================================
+// ClearBeams - remove all beams
+//=========================================================
+void CTriggerTelefrag::ClearThink()
+{
+	for (int i = 0; i < TELEFRAG_SPAWN_BEAM_COUNT; i++)
+	{
+		if (m_pBeam[i])
+		{
+			UTIL_Remove(m_pBeam[i]);
+			m_pBeam[i] = NULL;
+		}
+	}
+	m_iBeams = 0;
+	UTIL_Remove(this);
+}
