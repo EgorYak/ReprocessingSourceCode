@@ -63,6 +63,53 @@ extern int nanmask;
 		(b)[1] = (a)[1]; \
 		(b)[2] = (a)[2]; \
 	}
+#define RAD2DEG( x  )  ( (float)(x) * (float)(180.f / M_PI) )
+
+inline void MatrixAngles(const float matrix[3][4], float *angles)
+{
+	float forward[3];
+	float left[3];
+	float up[3];
+
+	//
+	// Extract the basis vectors from the matrix. Since we only need the Z
+	// component of the up vector, we don't get X and Y.
+	//
+	forward[0] = matrix[0][0];
+	forward[1] = matrix[1][0];
+	forward[2] = matrix[2][0];
+	left[0] = matrix[0][1];
+	left[1] = matrix[1][1];
+	left[2] = matrix[2][1];
+	up[2] = matrix[2][2];
+
+	float xyDist = sqrtf(forward[0] * forward[0] + forward[1] * forward[1]);
+
+	// enough here to get angles?
+	if (xyDist > 0.001f)
+	{
+		// (yaw)    y = ATAN( forward.y, forward.x );        -- in our space, forward is the X axis
+		angles[1] = RAD2DEG(atan2f(forward[1], forward[0]));
+
+		// (pitch)    x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
+		angles[0] = RAD2DEG(atan2f(-forward[2], xyDist));
+
+		// (roll)    z = ATAN( left.z, up.z );
+		angles[2] = RAD2DEG(atan2f(left[2], up[2]));
+	}
+	else    // forward is mostly Z, gimbal lock-
+	{
+		// (yaw)    y = ATAN( -left.x, left.y );            -- forward is mostly z, so use right for yaw
+		angles[1] = RAD2DEG(atan2f(-left[0], left[1]));
+
+		// (pitch)    x = ATAN( -forward.z, sqrt(forward.x*forward.x+forward.y*forward.y) );
+		angles[0] = RAD2DEG(atan2f(-forward[2], xyDist));
+
+		// Assume no roll in this case as one degree of freedom has been lost (i.e. yaw == roll)
+		angles[2] = 0;
+	}
+}
+
 inline void VectorClear(float* a)
 {
 	a[0] = 0.0;

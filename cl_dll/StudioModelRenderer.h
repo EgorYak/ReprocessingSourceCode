@@ -248,6 +248,8 @@ public:
 	// prikol
 	virtual int StudioCheckPar(void);
 
+	//Vector			m_vAttachAngles[4];	// attach angels
+
 	//RENDERERS START
 	/*
 public:

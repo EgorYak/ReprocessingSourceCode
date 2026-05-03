@@ -1265,3 +1265,181 @@ int CFurniture::Classify()
 {
 	return CLASS_NONE;
 }
+
+#include "player.h"
+//=========================================================
+// some shit for first person cutscenes
+//=========================================================
+
+class CModelCamera : public CBaseDelay
+{
+public:
+	void Spawn() override;
+	bool KeyValue(KeyValueData* pkvd) override;
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+	void EXPORT FollowTarget();
+
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	int ObjectCaps() override { return CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	static TYPEDESCRIPTION m_SaveData[];
+
+	void MovetoTarget(Vector vecTarget);
+
+	EHANDLE m_hPlayer;
+	EHANDLE m_hTarget;
+	float m_flWait;
+	float m_flReturnTime;
+	Vector m_vecIdeal;
+};
+LINK_ENTITY_TO_CLASS(model_camera, CModelCamera);
+
+// Global Savedata for changelevel friction modifier
+TYPEDESCRIPTION CModelCamera::m_SaveData[] =
+{
+	DEFINE_FIELD(CModelCamera, m_hPlayer, FIELD_EHANDLE),
+	DEFINE_FIELD(CModelCamera, m_hTarget, FIELD_EHANDLE),
+	DEFINE_FIELD(CModelCamera, m_flWait, FIELD_FLOAT),
+	DEFINE_FIELD(CModelCamera, m_flReturnTime, FIELD_TIME),
+	DEFINE_FIELD(CModelCamera, m_vecIdeal, FIELD_VECTOR),
+};
+
+IMPLEMENT_SAVERESTORE(CModelCamera, CBaseDelay);
+
+void CModelCamera::Spawn()
+{
+	pev->movetype = MOVETYPE_NOCLIP;
+	pev->solid = SOLID_NOT; // Remove model & collisions
+	pev->renderamt = 0;		// The engine won't draw this model if this is set to 0 and blending is on
+	pev->rendermode = kRenderTransTexture;
+}
+
+
+bool CModelCamera::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "wait"))
+	{
+		m_flWait = atof(pkvd->szValue);
+		return true;
+	}
+
+	return CBaseDelay::KeyValue(pkvd);
+}
+
+
+
+void CModelCamera::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	if (!ShouldToggle(useType, USE_OFF))
+		return;
+
+	if (!pActivator || !pActivator->IsPlayer())
+	{
+		pActivator = UTIL_GetLocalPlayer();
+
+		if (!pActivator)
+		{
+			return;
+		}
+	}
+
+	auto player = static_cast<CBasePlayer*>(pActivator);
+
+	m_hPlayer = pActivator;
+
+	m_flReturnTime = gpGlobals->time + m_flWait;
+
+	m_hTarget = GetNextTarget();
+
+	// Nothing to look at!
+	if (m_hTarget == NULL)
+	{
+		return;
+	}
+
+	player->EnableControl(false);
+
+	SET_VIEW(pActivator->edict(), edict());
+
+	SET_MODEL(ENT(pev), STRING(m_hTarget->pev->model));
+
+	player->m_hViewEntity = this;
+
+	Vector vecArmPos, vecArmAng;
+	GET_ATTACHMENT(m_hTarget->edict(), 0, vecArmPos, vecArmAng);
+
+	UTIL_SetOrigin(pev, vecArmPos);
+	pev->angles.x = -m_hTarget->pev->angles.x;
+	pev->angles.y = m_hTarget->pev->angles.y;
+	pev->angles.z = m_hTarget->pev->angles.z;
+	pev->iuser1 = 15;
+	m_hTarget->pev->iuser1 = 14;
+	//pev->velocity = m_hTarget->pev->velocity;
+	/*
+	ALERT(at_console, "%s - classname\n", STRING(edict()->v.classname));
+	ALERT(at_console, "%f, %f, %f - origin\n", pev->origin.x, pev->origin.y, pev->origin.z);
+	ALERT(at_console, "%f, %f, %f - target origin\n", m_hTarget->pev->origin.x, m_hTarget->pev->origin.y, m_hTarget->pev->origin.z);
+	*/
+
+	// follow the player down
+	SetThink(&CModelCamera::FollowTarget);
+	pev->nextthink = gpGlobals->time;
+}
+
+
+void CModelCamera::FollowTarget()
+{
+	if (m_hPlayer == NULL)
+		return;
+
+	if (m_hTarget == NULL || m_flReturnTime < gpGlobals->time)
+	{
+		auto player = static_cast<CBasePlayer*>(static_cast<CBaseEntity*>(m_hPlayer));
+
+		if (player->IsAlive())
+		{
+			SET_VIEW(player->edict(), player->edict());
+			player->EnableControl(true);
+		}
+
+		player->m_hViewEntity = nullptr;
+		player->m_bResetViewEntity = false;
+
+		SUB_UseTargets(this, USE_OFF, 0);
+		pev->avelocity = Vector(0, 0, 0);
+		m_hPlayer->pev->origin = m_hTarget->Center();
+		m_hPlayer->pev->angles = m_hTarget->pev->angles;
+		return;
+	}
+
+	//Vector vecArmPos, vecArmAng;
+	//GET_ATTACHMENT(m_hTarget->edict(), 0, vecArmPos, vecArmAng);
+
+	//UTIL_SetOrigin(pev, vecArmPos);
+	//MovetoTarget(vecArmPos);
+	/*
+	pev->angles.x = -m_hTarget->pev->angles.x;
+	pev->angles.y = m_hTarget->pev->angles.y;
+	pev->angles.z = m_hTarget->pev->angles.z;
+	*/
+
+	//pev->velocity = m_hTarget->pev->velocity;
+	pev->nextthink = gpGlobals->time;
+
+	/*
+	ALERT(at_console, "%f, %f, %f - origin\n", pev->origin.x, pev->origin.y, pev->origin.z);
+	ALERT(at_console, "%f, %f, %f - target origin\n", m_hTarget->pev->origin.x, m_hTarget->pev->origin.y, m_hTarget->pev->origin.z);
+	*/
+}
+
+void CModelCamera::MovetoTarget(Vector vecTarget)
+{
+	/*
+	if ((vecTarget - pev->origin).Length2D() >= 1)
+		m_vecIdeal = m_vecIdeal + (vecTarget - pev->origin).Normalize();
+	else
+		m_vecIdeal = vecTarget;
+	//pev->velocity = m_vecIdeal;
+	UTIL_SetOrigin(pev, m_vecIdeal);
+	*/
+}

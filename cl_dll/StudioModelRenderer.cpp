@@ -1697,6 +1697,8 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 	return true;
 }
 
+extern Vector gCutsceneCameraOrg;
+extern Vector gCutsceneCameraAng;
 /*
 ====================
 StudioCalcAttachments
@@ -1714,11 +1716,26 @@ void CStudioModelRenderer::StudioCalcAttachments()
 		exit(-1);
 	}
 
+	Vector bonepos;
+	float x, y, z;
+
 	// calculate attachment points
 	pattachment = (mstudioattachment_t*)((byte*)m_pStudioHeader + m_pStudioHeader->attachmentindex);
 	for (i = 0; i < m_pStudioHeader->numattachments; i++)
 	{
 		VectorTransform(pattachment[i].org, (*m_plighttransform)[pattachment[i].bone], m_pCurrentEntity->attachment[i]);
+		if (m_pCurrentEntity->curstate.iuser1 == 14);
+		{
+			MatrixAngles((*m_plighttransform)[pattachment[i].bone], bonepos);
+			x = bonepos[0];
+			y = bonepos[1];
+			z = bonepos[2];
+			bonepos[0] = x + 90;
+			bonepos[1] = z + 90;
+			bonepos[2] = y;
+			VectorCopy(bonepos, gCutsceneCameraAng);
+			VectorCopy(m_pCurrentEntity->attachment[i], gCutsceneCameraOrg);
+		}
 	}
 }
 

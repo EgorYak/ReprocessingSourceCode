@@ -80,7 +80,6 @@ TYPEDESCRIPTION CTripmineGrenade::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE(CTripmineGrenade, CGrenade);
 
-
 void CTripmineGrenade::Spawn()
 {
 	Precache();
@@ -95,7 +94,13 @@ void CTripmineGrenade::Spawn()
 	ResetSequenceInfo();
 	pev->framerate = 0;
 
-	UTIL_SetSize(pev, Vector(-8, -8, -8), Vector(8, 8, 8));
+	if (pev->angles.y >= 270.0 || pev->angles.y <= 90.0) {
+		UTIL_SetSize(pev, Vector(0.0f, 0.0f, 0.0f), Vector(1.0f, 1.0f, 1.0f));
+	}
+	else {
+		UTIL_SetSize(pev, Vector(-1.0f, -1.0f, 0.0f), Vector(0.0f, 0.0f, 1.0f));
+	}
+	//UTIL_SetSize(pev, Vector(-8, -8, -8), Vector(8, 8, 8));
 	UTIL_SetOrigin(pev, pev->origin);
 
 	//TODO: define constant
@@ -299,6 +304,10 @@ void CTripmineGrenade::BeamBreakThink()
 		}
 	}
 
+	if (tr.fStartSolid)
+	{
+		bBlowup = true;
+	}
 	if (fabs(m_flBeamLength - tr.flFraction) > 0.001)
 	{
 		bBlowup = true;

@@ -420,7 +420,7 @@ void CBaseEntity::ProcessChild(void)
 	if (m_pParent->pev->flags & FL_MONSTER)
 		pev->origin = pParentOrigin + (forward * ChildOffsetOrigin.x) + (right * ChildOffsetOrigin.y) + (up * ChildOffsetOrigin.z);
 	else	pev->origin = pParentOrigin + (forward * ChildOffsetOrigin.x) + (-right * ChildOffsetOrigin.y) + (up * ChildOffsetOrigin.z);
-
+	
 	if (m_pParent->pev->velocity != pev->velocity)
 	{
 		pev->velocity = m_pParent->pev->velocity;
@@ -437,12 +437,14 @@ void CBaseEntity::ProcessChild(void)
 	}
 	pev->angles = (pParentAngles + ChildOffsetAngles);
 	ChildOldAngles = pev->angles;
+	//ALERT(at_console, "%f,%f,%f = ChildOffsetAngles\n", ChildOffsetAngles.x, ChildOffsetAngles.y, ChildOffsetAngles.z);
 }
 
 
 void CBaseEntity::Activate()
 {
-	SetParent();//set all parents
+	if(!m_pParent)
+		SetParent();//set all parents
 }
 
 
@@ -749,6 +751,7 @@ TYPEDESCRIPTION CBaseEntity::m_SaveData[] =
 		DEFINE_FIELD(CBaseEntity, m_EFlags, FIELD_CHARACTER),
 
 		DEFINE_FIELD(CBaseEntity, ChildOffsetOrigin, FIELD_VECTOR),
+		DEFINE_FIELD(CBaseEntity, ChildOldAngles, FIELD_VECTOR),
 		DEFINE_FIELD(CBaseEntity, ChildOffsetAngles, FIELD_VECTOR),
 		DEFINE_FIELD(CBaseEntity, m_pParent, FIELD_CLASSPTR),
 		DEFINE_FIELD(CBaseEntity, m_iParent, FIELD_STRING),

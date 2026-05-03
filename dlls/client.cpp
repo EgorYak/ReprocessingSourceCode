@@ -1380,6 +1380,11 @@ int AddToFullPack(struct entity_state_s* state, int e, edict_t* ent, edict_t* ho
 	state->framerate = ent->v.framerate;
 	state->body = ent->v.body;
 
+	if (0 == player)
+	{
+		state->iuser1 = ent->v.iuser1;
+	}
+
 	for (i = 0; i < 4; i++)
 	{
 		state->controller[i] = ent->v.controller[i];

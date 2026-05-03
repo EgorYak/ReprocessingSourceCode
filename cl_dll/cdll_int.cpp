@@ -41,6 +41,8 @@
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
 CMP3 gMP3;
+Vector gCutsceneCameraAng;
+Vector gCutsceneCameraOrg;
 //CSoundEngine gSoundEngine;
 TeamFortressViewport* gViewPort = NULL;
 

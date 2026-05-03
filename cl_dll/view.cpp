@@ -21,6 +21,9 @@
 #include "Exports.h"
 //#include "soundengine.h"
 
+extern Vector gCutsceneCameraOrg;
+extern Vector gCutsceneCameraAng;
+
 int CL_IsThirdPerson();
 void CL_CameraOffset(float* ofs);
 
@@ -830,7 +833,6 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 
 	// Let the viewmodel shake at about 10% of the amplitude
 	gEngfuncs.V_ApplyShake(view->origin, view->angles, 0.9);
-
 	// lower viewmodel at the wall
 	if (view->model)
 	{
@@ -1177,7 +1179,20 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 		{
 			VectorCopy(viewentity->origin, pparams->vieworg);
 			VectorCopy(viewentity->angles, pparams->viewangles);
-
+			
+			if (viewentity->model)
+			{
+				if (viewentity->curstate.iuser1 == 15);
+				{
+					Vector camAngle;
+					VectorCopy(gCutsceneCameraAng, camAngle);
+					camAngle[1] += viewentity->angles[1];
+					camAngle[2] -= viewentity->angles[1];
+					VectorCopy(gCutsceneCameraOrg, pparams->vieworg);
+					VectorCopy(camAngle, pparams->viewangles);
+				}
+			}
+			
 			// Store off overridden viewangles
 			v_angles = pparams->viewangles;
 		}
