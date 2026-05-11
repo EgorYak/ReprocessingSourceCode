@@ -1363,13 +1363,12 @@ void CModelCamera::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE u
 	}
 
 	player->EnableControl(false);
-	pev->iuser1 = 15;
+	//pev->iuser1 = 15;
 	m_hTarget->pev->iuser1 = 14;
-	SET_VIEW(pActivator->edict(), edict());
-
-	SET_MODEL(ENT(pev), STRING(player->pev->model));
-
-	player->m_hViewEntity = this;
+	player->m_hViewEntity = m_hTarget;
+	//SET_MODEL(ENT(pev), STRING(player->pev->model));
+	SET_VIEW(pActivator->edict(), m_hTarget->edict());
+	/*
 	Vector vecArmPos, vecArmAng;
 	GET_ATTACHMENT(m_hTarget->edict(), 0, vecArmPos, vecArmAng);
 
@@ -1377,6 +1376,7 @@ void CModelCamera::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE u
 	pev->angles.x = -m_hTarget->pev->angles.x;
 	pev->angles.y = m_hTarget->pev->angles.y;
 	pev->angles.z = m_hTarget->pev->angles.z;
+	*/
 
 	// follow the player down
 	SetThink(&CModelCamera::FollowTarget);

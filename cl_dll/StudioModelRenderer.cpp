@@ -1725,7 +1725,7 @@ void CStudioModelRenderer::StudioCalcAttachments()
 	for (i = 0; i < m_pStudioHeader->numattachments; i++)
 	{
 		VectorTransform(pattachment[i].org, (*m_plighttransform)[pattachment[i].bone], m_pCurrentEntity->attachment[i]);
-		if (!stricmp (m_pCurrentEntity->model->name , "models/SgtWest_cutscenes.mdl") && m_pCurrentEntity->curstate.iuser1 != 15)
+		if (m_pCurrentEntity->curstate.iuser1 == 14)
 		{
 			Vector resultang;
 			/*

@@ -1180,10 +1180,16 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 			VectorCopy(viewentity->origin, pparams->vieworg);
 			VectorCopy(viewentity->angles, pparams->viewangles);
 			
-			if (viewentity->curstate.iuser1 == 15)
+			if (viewentity->curstate.iuser1 == 14 && gCutsceneCameraOrg != g_vecZero && gCutsceneCameraOrg != viewentity->origin)
 			{
 				VectorCopy(gCutsceneCameraOrg, pparams->vieworg);
 				VectorCopy(gCutsceneCameraAng, pparams->viewangles);
+			}
+			else
+			{
+				// clear
+				gCutsceneCameraOrg = g_vecZero;
+				gCutsceneCameraAng = g_vecZero;
 			}
 
 			// Store off overridden viewangles

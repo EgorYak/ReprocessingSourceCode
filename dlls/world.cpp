@@ -740,6 +740,10 @@ void CWorld::Precache()
 
 	gDisplayTitle = (pev->spawnflags & SF_WORLD_TITLE) != 0;
 
+	pev->spawnflags &= ~SF_WORLD_DARK;		// g-cont. don't apply fade after save\restore
+
+	pev->spawnflags &= ~SF_WORLD_TITLE;		// g-cont. don't show logo after save\restore
+
 	if ((pev->spawnflags & SF_WORLD_FORCETEAM) != 0)
 	{
 		CVAR_SET_FLOAT("mp_defaultteam", 1);
