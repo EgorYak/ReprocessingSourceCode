@@ -220,6 +220,11 @@ const char* CBreakable::pSoundsConcrete[] =
 		"debris/concrete3.wav",
 };
 
+const char* CBreakable::pSoundsWater[] =
+{
+	"debris/drip1.wav",
+	"debris/drip2.wav",
+};
 
 const char* CBreakable::pSoundsGlass[] =
 	{
@@ -260,7 +265,10 @@ const char** CBreakable::MaterialSoundList(Materials precacheMaterial, int& soun
 		soundCount = ARRAYSIZE(pSoundsConcrete);
 		break;
 
-
+	case matWater:
+		pSoundList = pSoundsWater;
+		soundCount = ARRAYSIZE(pSoundsWater);
+		break;
 	case matCeilingTile:
 	case matNone:
 	default:

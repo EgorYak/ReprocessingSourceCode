@@ -22,6 +22,8 @@ float CL_KeyState(kbutton_t* key);
 
 extern cl_enginefunc_t gEngfuncs;
 
+extern int g_iDrawLegs;
+
 //-------------------------------------------------- Constants
 
 #define CAM_DIST_DELTA 1.0
@@ -616,7 +618,7 @@ int DLLEXPORT CL_IsThirdPerson()
 {
 	//	RecClCL_IsThirdPerson();
 
-	return static_cast<int>(cam_thirdperson || (0 != g_iUser1 && (g_iUser2 == gEngfuncs.GetLocalPlayer()->index)));
+	return static_cast<int>(cam_thirdperson || (0 != g_iUser1 && (g_iUser2 == gEngfuncs.GetLocalPlayer()->index)) || (g_iDrawLegs ? 1 : 0));
 }
 
 void DLLEXPORT CL_CameraOffset(float* ofs)

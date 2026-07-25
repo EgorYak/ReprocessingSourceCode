@@ -1557,6 +1557,9 @@ bool CEnvShooter::KeyValue(KeyValueData* pkvd)
 		case 4:
 			m_iGibMaterial = matRocks;
 			break;
+		case 11:
+			m_iGibMaterial = matWater;
+			break;
 
 		default:
 		case -1:

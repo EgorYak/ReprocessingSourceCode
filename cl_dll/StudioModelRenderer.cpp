@@ -52,6 +52,7 @@ void CStudioModelRenderer::Init()
 	m_pCvarHiModels = IEngineStudio.GetCvar("cl_himodels");
 	m_pCvarDeveloper = IEngineStudio.GetCvar("developer");
 	m_pCvarDrawEntities = IEngineStudio.GetCvar("r_drawentities");
+	m_pCvarDrawLegs = gEngfuncs.pfnRegisterVariable("r_drawlegs", "1", 0);
 
 	m_pChromeSprite = IEngineStudio.GetChromeSprite();
 
@@ -78,6 +79,7 @@ CStudioModelRenderer::CStudioModelRenderer()
 	m_pCvarHiModels = NULL;
 	m_pCvarDeveloper = NULL;
 	m_pCvarDrawEntities = NULL;
+	m_pCvarDrawLegs = NULL;
 	m_pChromeSprite = NULL;
 	m_pStudioModelCount = NULL;
 	m_pModelsDrawn = NULL;
@@ -586,6 +588,18 @@ void CStudioModelRenderer::StudioSetUpTransform(bool trivial_accept)
 	(*m_protationmatrix)[0][3] = modelpos[0];
 	(*m_protationmatrix)[1][3] = modelpos[1];
 	(*m_protationmatrix)[2][3] = modelpos[2];
+
+	if (m_pCurrentEntity->curstate.scale != 0 && m_pCurrentEntity->curstate.iuser1 == 2 )
+	{
+		int j;
+		for (i = 0; i < 3; i++)
+		{
+			for (j = 0; j < 3; j++)
+			{
+				(*m_protationmatrix)[i][j] *= m_pCurrentEntity->curstate.scale;
+			}
+		}
+	}
 }
 
 
@@ -1533,6 +1547,9 @@ void CStudioModelRenderer::StudioProcessGait(entity_state_t* pplayer)
 }
 
 
+extern int g_iDrawLegs;
+extern bool cam_thirdperson;
+extern Vector v_angles;
 
 
 /*
@@ -1556,8 +1573,20 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 	if (m_nPlayerIndex < 0 || m_nPlayerIndex >= gEngfuncs.GetMaxClients())
 		return false;
 
+	int iShouldDrawLegs = (!g_iDrawLegs && m_pCurrentEntity == gEngfuncs.GetLocalPlayer()) ? 1 : 0;
 
-	m_pRenderModel = IEngineStudio.SetupPlayerModel(m_nPlayerIndex);
+	if (iShouldDrawLegs && !cam_thirdperson)
+	{
+		char modelname[256];
+		strcpy(modelname, IEngineStudio.SetupPlayerModel(m_nPlayerIndex)->name);
+		modelname[strlen(modelname) - strlen(".mdl")] = 0;
+		strcat(modelname, "_legs.mdl");
+
+		m_pRenderModel = IEngineStudio.Mod_ForName(modelname, 1);
+		//m_pRenderModel = IEngineStudio.Mod_ForName("models/player.mdl", 1);
+	}
+	else
+		m_pRenderModel = IEngineStudio.SetupPlayerModel(m_nPlayerIndex);
 
 
 	if (m_pRenderModel == NULL)
@@ -1575,6 +1604,22 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		VectorCopy(m_pCurrentEntity->angles, orig_angles);
 
 		StudioProcessGait(pplayer);
+
+		if (iShouldDrawLegs && !cam_thirdperson)
+		{
+				Vector origin, angles, forward;
+
+				VectorCopy(m_pCurrentEntity->origin, origin);
+				VectorCopy(v_angles, angles);
+
+				angles[PITCH] = angles[ROLL] = NULL;
+				AngleVectors(angles, forward, NULL, NULL);
+
+				origin = origin - (forward * 20);
+				VectorCopy(origin, m_pCurrentEntity->origin);
+				VectorCopy(angles, m_pCurrentEntity->angles);
+		}
+
 
 		m_pPlayerInfo->gaitsequence = pplayer->gaitsequence;
 		m_pPlayerInfo = NULL;
@@ -1675,7 +1720,8 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		StudioRenderModel();
 		m_pPlayerInfo = NULL;
 
-		if (0 != pplayer->weaponmodel)
+		if (0 != pplayer->weaponmodel &&
+			((iShouldDrawLegs && cam_thirdperson) || m_pCurrentEntity != gEngfuncs.GetLocalPlayer()))
 		{
 			cl_entity_t saveent = *m_pCurrentEntity;
 
@@ -1702,6 +1748,8 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 
 extern Vector gCutsceneCameraOrg;
 extern Vector gCutsceneCameraAng;
+extern Vector gDeadCameraOrg;
+extern Vector gDeadCameraAng;
 extern void MatrixAngles(const float matrix[3][4], float *angles);
 /*
 ====================
@@ -1764,6 +1812,40 @@ void CStudioModelRenderer::StudioCalcAttachments()
 			VectorCopy(m_pCurrentEntity->attachment[i], gCutsceneCameraOrg);
 			//gEngfuncs.Con_Printf("%f, %f, %f = angles\n", resultang[0], resultang[1], resultang[2]);
 		}
+		/*
+		if (!strcmp("models/player.mdl", m_pCurrentEntity->model->name))
+		{
+			Vector resultang;
+			Vector forward, up;
+			gEngfuncs.Con_Printf("model = %s\n", m_pCurrentEntity->model->name);
+
+			// Often attachment forward is Y axis
+			forward[0] = (*m_plighttransform)[pattachment[i].bone][0][1];
+			forward[1] = (*m_plighttransform)[pattachment[i].bone][1][1];
+			forward[2] = (*m_plighttransform)[pattachment[i].bone][2][1];
+			up[2] = (*m_plighttransform)[pattachment[i].bone][2][2];
+
+			float xyDist = sqrtf(forward[0] * forward[0] + forward[1] * forward[1]);
+
+			VectorAngles(forward, resultang);
+			// GoldSrc camera correction
+			resultang[0] = -resultang[0];
+
+			// Normalize
+			if (resultang[0] > 180)
+				resultang[0] -= 360.0;
+			else if (resultang[0] < -180)
+				resultang[0] += 360;
+
+			if (resultang[1] > 180)
+				resultang[1] -= 360.0;
+			else if (resultang[1] < -180)
+				resultang[1] += 360;
+
+			VectorCopy(resultang, gDeadCameraAng);
+			VectorCopy(m_pCurrentEntity->attachment[i], gDeadCameraOrg);
+		}
+		*/
 	}
 }
 

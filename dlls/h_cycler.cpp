@@ -137,6 +137,12 @@ void CCycler::Spawn()
 	{
 		m_animate = true;
 	}
+	pev->iuser1 = 2;
+	if (FBitSet(pev->spawnflags, 16))
+	{
+		SET_SIZE(ENT(pev), g_vecZero, g_vecZero);
+		pev->solid = SOLID_NOT;
+	}
 }
 
 

@@ -29,7 +29,7 @@ class CSatchelCharge : public CGrenade
 
 	virtual int	ObjectCaps(void) { return CGrenade::ObjectCaps() | FCAP_IMPULSE_USE; }
 
-	void DetonateUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
+	void EXPORT DetonateUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
 
 	void EXPORT SatchelSlide(CBaseEntity* pOther);
 	void EXPORT SatchelThink();
@@ -63,7 +63,7 @@ void CSatchelCharge::Spawn()
 	UTIL_SetOrigin(pev, pev->origin);
 
 	SetTouch(&CSatchelCharge::SatchelSlide);
-	//SetUse(&CSatchelCharge::DetonateUse);
+	SetUse(&CSatchelCharge::DetonateUse);
 	SetThink(&CSatchelCharge::SatchelThink);
 	pev->nextthink = gpGlobals->time + 0.1;
 
@@ -128,7 +128,7 @@ void CSatchelCharge::SatchelThink()
 {
 	StudioFrameAdvance();
 	pev->nextthink = gpGlobals->time + 0.1;
-	SetUse(&CSatchelCharge::DetonateUse);
+	//SetUse(&CSatchelCharge::DetonateUse);
 	if (!IsInWorld())
 	{
 		UTIL_Remove(this);

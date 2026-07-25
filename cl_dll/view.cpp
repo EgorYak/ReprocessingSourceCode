@@ -23,6 +23,8 @@
 
 extern Vector gCutsceneCameraOrg;
 extern Vector gCutsceneCameraAng;
+extern Vector gDeadCameraOrg;
+extern Vector gDeadCameraAng;
 
 int CL_IsThirdPerson();
 void CL_CameraOffset(float* ofs);
@@ -625,6 +627,8 @@ V_CalcRefdef
 
 ==================
 */
+extern int g_iDrawLegs;
+
 void V_CalcNormalRefdef(struct ref_params_s* pparams)
 {
 	cl_entity_t *ent, *view;
@@ -1201,6 +1205,14 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 		gCutsceneCameraOrg = g_vecZero;
 		gCutsceneCameraAng = g_vecZero;
 	}
+	/*
+	if (!g_iDrawLegs && gDeadCameraOrg != g_vecZero)
+	{
+		VectorCopy(gDeadCameraOrg, pparams->vieworg);
+		VectorCopy(gDeadCameraAng, pparams->viewangles);
+		gEngfuncs.Con_Printf("result = %f, %f, %f = angles\n", gDeadCameraAng[0], gDeadCameraAng[1], gDeadCameraAng[2]);
+	}
+	*/
 
 	lasttime = pparams->time;
 

@@ -876,6 +876,10 @@ void CGib::BounceGibTouch(CBaseEntity* pOther)
 
 			CBreakable::MaterialSoundRandom(edict(), (Materials)m_material, volume);
 		}
+		if (m_material == matWater)
+		{
+			UTIL_Remove(this);
+		}
 	}
 }
 
@@ -1148,6 +1152,13 @@ bool CBaseMonster::DeadTakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacke
 		// Accumulate corpse gibbing damage, so you can gib with multiple hits
 		pev->health -= flDamage * 0.1;
 	}
+
+	// shake baby!
+	/*
+	ALERT(at_aiconsole, "%d", pev->frame);
+	pev->frame = pev->frame / 2;
+	ResetSequenceInfo();
+	*/
 
 	return true;
 }

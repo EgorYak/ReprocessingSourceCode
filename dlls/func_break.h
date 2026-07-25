@@ -32,7 +32,8 @@ typedef enum
 	matUnbreakableGlass,
 	matRocks,
 	matNone,
-	matLastMaterial
+	matLastMaterial,
+	matWater
 } Materials;
 
 #define NUM_SHARDS 6 // this many shards spawned when breakable objects break;
@@ -76,6 +77,7 @@ public:
 	static const char* pSoundsGlass[];
 	static const char* pSoundsMetal[];
 	static const char* pSoundsConcrete[];
+	static const char* pSoundsWater[];
 	static const char* pSpawnObjects[];
 
 	static TYPEDESCRIPTION m_SaveData[];

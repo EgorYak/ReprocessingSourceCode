@@ -1367,6 +1367,130 @@ int CGraph::LinkVisibleNodes(CLink* pLinkPool, FSFile& file, int* piBadNode)
 }
 
 //=========================================================
+// CGraph - LinkTargetNodes - connects nodes based on 
+// target/targetname relationships
+//=========================================================
+int CGraph::LinkTargetNodes(CLink* pLinkPool, FSFile& file, int* piBadNode)
+{
+	if (!file)
+	{
+		ALERT(at_aiconsole, "**LinkTargetNodes:\ncan't write to file.");
+	}
+	else
+	{
+		file.Printf("----------------------------------------------------------------------------\n");
+		file.Printf("LinkTargetNodes - Target Connections\n");
+		file.Printf("----------------------------------------------------------------------------\n");
+	}
+
+	int cNewLinks = 0;
+
+	for (int i = 0; i < m_cNodes; i++)
+	{
+		CNode* pSrcNode = &m_pNodes[i];
+
+		if (pSrcNode->m_cTargets == 0)
+			continue;
+
+		for (int t = 0; t < pSrcNode->m_cTargets && t < MAX_NODE_TARGETS; t++)
+		{
+			if (FStringNull(pSrcNode->m_iTargetName[t]))
+				continue;
+
+			const char* szTarget = STRING(pSrcNode->m_iTargetName[t]);
+
+			// Find the node that has this targetname
+			bool bFoundTarget = false;
+			for (int j = 0; j < m_cNodes; j++)
+			{
+				if (j == i)
+					continue;
+
+				// Check if this node's name matches the target
+				if (!FStringNull(m_pNodes[j].m_iNodeName) &&
+					FStrEq(STRING(m_pNodes[j].m_iNodeName), szTarget))
+				{
+					bFoundTarget = true;
+
+					// Check if this link already exists from LinkVisibleNodes
+					bool bLinkExists = false;
+					for (int k = 0; k < pSrcNode->m_cNumLinks; k++)
+					{
+						if (pLinkPool[pSrcNode->m_iFirstLink + k].m_iDestNode == j)
+						{
+							bLinkExists = true;
+							break;
+						}
+					}
+
+					if (!bLinkExists)
+					{
+						ALERT(at_console, "create target link\n");
+						// Find the current last link position for this source node
+						int iNewLinkIndex = pSrcNode->m_iFirstLink + pSrcNode->m_cNumLinks;
+
+						// Create new link
+						pLinkPool[iNewLinkIndex].m_iSrcNode = i;
+						pLinkPool[iNewLinkIndex].m_iDestNode = j;
+						pLinkPool[iNewLinkIndex].m_pLinkEnt = NULL;
+						pLinkPool[iNewLinkIndex].m_flWeight =
+							(m_pNodes[j].m_vecOrigin - m_pNodes[i].m_vecOrigin).Length();
+						pLinkPool[iNewLinkIndex].m_afLinkInfo =
+							bits_LINK_SMALL_HULL | bits_LINK_HUMAN_HULL |
+							bits_LINK_LARGE_HULL | bits_LINK_TARGET;
+						// Clear the model name
+						memset(pLinkPool[iNewLinkIndex].m_szLinkEntModelname, 0, 4);
+
+						pSrcNode->m_cNumLinks++;
+						cNewLinks++;
+
+						if (file)
+						{
+							file.Printf("Node %3d -> Node %3d (via targetname \"%s\")\n",
+								i, j, szTarget);
+						}
+					}
+					else if (file)
+					{
+						// Link already exists - just update its flags to include TARGET
+						for (int k = 0; k < pSrcNode->m_cNumLinks; k++)
+						{
+							if (pLinkPool[pSrcNode->m_iFirstLink + k].m_iDestNode == j)
+							{
+								//ALERT(at_console, "moddify exisitng connection\n");
+								// Update the existing link to have all hull flags + target flag
+								pLinkPool[pSrcNode->m_iFirstLink + k].m_afLinkInfo =
+									bits_LINK_SMALL_HULL | bits_LINK_HUMAN_HULL |
+									bits_LINK_LARGE_HULL | bits_LINK_TARGET;
+								break;
+							}
+						}
+
+						file.Printf("Node %3d -> Node %3d already connected (skipping target \"%s\")\n",
+							i, j, szTarget);
+					}
+					break; // Found the target, move to next target
+				}
+			}
+
+			if (!bFoundTarget && file)
+			{
+				file.Printf("Node %3d: Target \"%s\" not found!\n", i, szTarget);
+			}
+		}
+	}
+
+	if (file)
+	{
+		file.Printf("Added %d target-based connections\n", cNewLinks);
+		file.Printf("----------------------------------------------------------------------------\n\n");
+	}
+
+	return cNewLinks;
+}
+
+
+//=========================================================
 // CGraph - RejectInlineLinks - expects a pointer to a link
 // pool, and a pointer to and already-open file ( if you
 // want status reports written to disk ). RETURNS the number
@@ -1408,6 +1532,17 @@ int CGraph::RejectInlineLinks(CLink* pLinkPool, FSFile& file)
 
 		for (j = 0; j < pSrcNode->m_cNumLinks; j++)
 		{
+			// Don't reject target-based forced connections
+			if ((pLinkPool[pSrcNode->m_iFirstLink + j].m_afLinkInfo & bits_LINK_TARGET) != 0)
+			{
+				if (file)
+				{
+					file.Printf("Node %3d - Target connection, skipping inline rejection\n",
+						pLinkPool[pSrcNode->m_iFirstLink + j].m_iDestNode);
+				}
+				continue;
+			}
+
 			pCheckNode = &m_pNodes[pLinkPool[pSrcNode->m_iFirstLink + j].m_iDestNode];
 
 			vec2DirToCheckNode = (pCheckNode->m_vecOrigin - pSrcNode->m_vecOrigin).Make2D();
@@ -1540,11 +1675,23 @@ bool CNodeEnt::KeyValue(KeyValueData* pkvd)
 		m_sHintType = (short)atoi(pkvd->szValue);
 		return true;
 	}
-
-	if (FStrEq(pkvd->szKeyName, "activity"))
+	else if (FStrEq(pkvd->szKeyName, "activity"))
 	{
 		m_sHintActivity = (short)atoi(pkvd->szValue);
 		return true;
+	}
+	else // add this field to the target list
+	{
+		// this assumes that additional fields are targetnames and their values are delay values.
+		if (m_cTargets < MAX_NODE_TARGETS)
+		{
+			char tmp[128];
+
+			UTIL_StripToken(pkvd->szKeyName, tmp);
+			m_iTargetName[m_cTargets] = ALLOC_STRING(tmp);
+			m_cTargets++;
+			return true;
+		}
 	}
 
 	return CBaseEntity::KeyValue(pkvd);
@@ -1580,6 +1727,15 @@ void CNodeEnt::Spawn()
 	WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_flHintYaw = pev->angles.y;
 	WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_sHintType = m_sHintType;
 	WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_sHintActivity = m_sHintActivity;
+
+	// for manual linking - Chukcha
+	WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_iNodeName = pev->targetname;
+	WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_cTargets = m_cTargets;
+	for (int i = 0; i < m_cTargets && i < MAX_NODE_TARGETS; i++)
+	{
+		WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_iTargetName[i] = m_iTargetName[i];
+	}
+	// end manual linking
 
 	if (FClassnameIs(pev, "info_node_air"))
 		WorldGraph.m_pNodes[WorldGraph.m_cNodes].m_afNodeInfo = bits_NODE_AIR;
@@ -1785,6 +1941,17 @@ void CTestHull::BuildNodeGraph()
 		return;
 	}
 
+	// Add target-based connections - Chukcha
+	int iTargetLinks = WorldGraph.LinkTargetNodes(pTempPool, file, &iBadNode);
+	cPoolLinks += iTargetLinks;
+
+
+	if (iTargetLinks > 0)
+	{
+		ALERT(at_aiconsole, "Added %d target-based connections, total links: %d\n",
+			iTargetLinks, cPoolLinks);
+	}
+
 	// send the walkhull to all of this node's connections now. We'll do this here since
 	// so much of it relies on being able to control the test hull.
 	file.Printf("----------------------------------------------------------------------------\n");
@@ -1799,6 +1966,15 @@ void CTestHull::BuildNodeGraph()
 
 		for (j = 0; j < pSrcNode->m_cNumLinks; j++)
 		{
+			// Check if this is a target-based forced connection
+			int iLinkIndex = pSrcNode->m_iFirstLink + j;
+			if ((pTempPool[iLinkIndex].m_afLinkInfo & bits_LINK_TARGET) != 0)
+			{
+				// Skip walk rejection for target-based connections
+				file.Printf("Node %3d - Target connection, skipping walk test\n", pTempPool[iLinkIndex].m_iDestNode);
+				continue;
+			}
+
 			// assume that all hulls can walk this link, then eliminate the ones that can't.
 			pTempPool[pSrcNode->m_iFirstLink + j].m_afLinkInfo = bits_LINK_SMALL_HULL | bits_LINK_HUMAN_HULL | bits_LINK_LARGE_HULL | bits_LINK_FLY_HULL;
 
@@ -1978,7 +2154,6 @@ void CTestHull::BuildNodeGraph()
 			WorldGraph.m_pLinkPool[iFinalPoolIndex++] = pTempPool[iOldFirstLink + j];
 		}
 	}
-
 
 	// Node sorting numbers linked nodes close to each other
 	//

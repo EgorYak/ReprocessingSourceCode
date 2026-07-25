@@ -84,7 +84,7 @@ public:
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	int IgnoreConditions() override;
 	void RunTask(Task_t* pTask) override;
-	void LeapTouch(CBaseEntity* pOther);
+	void EXPORT LeapTouch(CBaseEntity* pOther);
 	void StartTask(Task_t* pTask) override;
 	Schedule_t* GetScheduleOfType(int Type) override;
 

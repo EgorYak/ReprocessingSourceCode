@@ -43,6 +43,10 @@ CHud gHUD;
 CMP3 gMP3;
 Vector gCutsceneCameraAng;
 Vector gCutsceneCameraOrg;
+Vector gDeadCameraAng;
+Vector gDeadCameraOrg;
+int g_iDrawLegs;
+
 //CSoundEngine gSoundEngine;
 TeamFortressViewport* gViewPort = NULL;
 
@@ -265,6 +269,8 @@ void DLLEXPORT HUD_Frame(double time)
 	{
 		gEngfuncs.Cvar_SetValue("cl_lw", 0.0f);
 	}
+	if (gEngfuncs.pfnGetCvarFloat("r_drawlegs"))
+		g_iDrawLegs = 0;
 
 	if (gEngfuncs.GetClientTime() == gMP3.fMp3time && !gMP3.m_bPaused)
 	{

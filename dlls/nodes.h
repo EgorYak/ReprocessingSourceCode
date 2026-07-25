@@ -27,6 +27,8 @@ class FSFile;
 #define NO_NODE -1
 #define MAX_NODE_HULLS 4
 
+#define MAX_NODE_TARGETS 16
+
 #define bits_NODE_LAND (1 << 0)	 // Land node, so nudge if necessary.
 #define bits_NODE_AIR (1 << 1)	 // Air node, don't nudge.
 #define bits_NODE_WATER (1 << 2) // Water node, don't nudge.
@@ -61,6 +63,11 @@ public:
 	short m_sHintType;	   // there is something interesting in the world at this node's position
 	short m_sHintActivity; // there is something interesting in the world at this node's position
 	float m_flHintYaw;	   // monster on this node should face this yaw to face the hint.
+
+	// for manual linking - Chukcha
+	int m_iNodeName;
+	int m_cTargets;							  // the total number of targets in this manager's fire list.
+	int m_iTargetName[MAX_NODE_TARGETS];	  // list if indexes into global string array
 };
 
 //=========================================================
@@ -71,6 +78,7 @@ public:
 #define bits_LINK_LARGE_HULL (1 << 2) // big box can fit through this connection
 #define bits_LINK_FLY_HULL (1 << 3)	  // a flying big box can fit through this connection
 #define bits_LINK_DISABLED (1 << 4)	  // link is not valid when the set
+#define bits_LINK_TARGET (1 << 5)  // Add this - marks target-based connections
 
 #define NODE_SMALL_HULL 0
 #define NODE_HUMAN_HULL 1
@@ -163,6 +171,7 @@ public:
 
 	// functions to create the graph
 	int LinkVisibleNodes(CLink* pLinkPool, FSFile& file, int* piBadNode);
+	int LinkTargetNodes(CLink* pLinkPool, FSFile& file, int* piBadNode); // Chukcha - link nodes by it's targetnames
 	int RejectInlineLinks(CLink* pLinkPool, FSFile& file);
 	int FindShortestPath(int* piPath, int iStart, int iDest, int iHull, int afCapMask);
 	int FindNearestNode(const Vector& vecOrigin, CBaseEntity* pEntity);
@@ -274,6 +283,8 @@ class CNodeEnt : public CBaseEntity
 
 	short m_sHintType;
 	short m_sHintActivity;
+	int m_cTargets;							  // the total number of targets in this manager's fire list.
+	int m_iTargetName[MAX_NODE_TARGETS];	  // list if indexes into global string array
 };
 
 

@@ -1254,7 +1254,7 @@ void CFurniture::Spawn()
 	//	SetThink (WalkMonsterDelay);
 
 	ResetSequenceInfo();
-	pev->frame = 0;
+	pev->iuser1 = 2;
 	MonsterInit();
 }
 

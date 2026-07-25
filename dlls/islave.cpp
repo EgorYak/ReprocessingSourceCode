@@ -78,7 +78,7 @@ public:
 	void ZapBeam(int side);
 	void BeamGlow();
 
-	void Revive(void);
+	void EXPORT Revive(void);
 
 	int m_iBravery;
 
