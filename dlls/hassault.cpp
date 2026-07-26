@@ -99,6 +99,10 @@ public:
 
 	bool FOkToSpeak();
 	void JustSpoke();
+	void SpeakSentence();
+
+	void StartTask(Task_t* pTask) override;
+	void RunTask(Task_t* pTask) override;
 
 	CBaseEntity* Kick();
 	Schedule_t	*GetSchedule( void );
@@ -285,7 +289,10 @@ void CHassault::HandleAnimEvent(MonsterEvent_t *pEvent)
 	{
 	case HASSAULT_AE_RELOAD:
 		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hAssault/gr_reload1.wav", 1, ATTN_NORM);
-		m_cAmmoLoaded = 100;
+		if (FBitSet(pev->weapons, 1))
+			m_cAmmoLoaded = 3;
+		else
+			m_cAmmoLoaded = 100;
 		ClearConditions(bits_COND_NO_AMMO_LOADED);
 		Forget(bits_MEMORY_INCOVER);
 		break;
@@ -359,7 +366,10 @@ void CHassault::Spawn()
 
 	m_HackedGunPos = Vector(0, 0, 55);
 
-	m_cAmmoLoaded = 100;
+	if (FBitSet(pev->weapons, 1))
+		m_cAmmoLoaded = 3;
+	else
+		m_cAmmoLoaded = 100;
 	ClearConditions(bits_COND_NO_AMMO_LOADED);
 
 	MonsterInit();
@@ -439,19 +449,20 @@ bool CHassault :: CheckRangeAttack1 ( float flDot, float flDist )
 			//vecTarget = vecTarget + ((vecTarget - pev->origin).Length() / gSkillData.hAssaultGrenadeSpeed) * m_hEnemy->pev->velocity;
 
 		Vector vecToss = VecCheckThrow(pev, GetGunPosition(), vecTarget, gSkillData.hgruntGrenadeSpeed, 0.5);
-
+		
 		if (vecToss != g_vecZero)
 		{
 			m_vecTossVelocity = vecToss;
 			// don't check again for a while.
-			m_flNextGrenadeCheck = gpGlobals->time + 1; // 1/3 second.
-
+			if (m_flNextAttack < gpGlobals->time)
+				return false;
+			m_flNextAttack = gpGlobals->time + 5; // 1/3 second.
 			return true;
 		}
 		else
 		{
 			// don't check again for a while.
-			m_flNextGrenadeCheck = gpGlobals->time + 3; // one full second.
+			m_flNextAttack = gpGlobals->time + 8; // one full second.
 			return false;
 		}
 	}
@@ -615,6 +626,7 @@ void CHassault::GrenadeShoot(void)
 	//m_cAmmoLoaded--;// take away a bullet!
 
 	Vector angDir = UTIL_VecToAngles(vecShootDir);
+	m_cAmmoLoaded--;// take away a bullet!
 	SetBlending(0, angDir.x);
 }
 
@@ -1019,7 +1031,10 @@ Schedule_t* CHassault::GetSchedule()
 
 				if (HasConditions(bits_COND_CAN_RANGE_ATTACK1))
 				{
-					return GetScheduleOfType(SCHED_Assault_SUPPRESS);
+					if (FBitSet(pev->weapons, 1))
+						return GetScheduleOfType(SCHED_RANGE_ATTACK1);
+					else
+						return GetScheduleOfType(SCHED_Assault_SUPPRESS);
 				}
 				else
 				{
@@ -1067,7 +1082,10 @@ Schedule_t* CHassault::GetSchedule()
 			}
 			else if (RANDOM_LONG(0, 1))
 			{
-				return GetScheduleOfType(SCHED_Assault_SUPPRESS);
+				if (FBitSet(pev->weapons, 1))
+					return GetScheduleOfType(SCHED_RANGE_ATTACK1);
+				else
+					return GetScheduleOfType(SCHED_Assault_SUPPRESS);
 			}
 			else
 			{
@@ -1080,7 +1098,7 @@ Schedule_t* CHassault::GetSchedule()
 
 		if (HasConditions(bits_COND_SEE_ENEMY) && !HasConditions(bits_COND_CAN_RANGE_ATTACK1))
 		{
-			if (RANDOM_LONG(0, 1))
+			if (RANDOM_LONG(0, 1) && FBitSet(pev->weapons, 1))
 			{
 				return GetScheduleOfType(SCHED_Assault_SUPPRESS);
 			}
@@ -1171,5 +1189,106 @@ Schedule_t* CHassault::GetScheduleOfType(int Type)
 	{
 		return CSquadMonster::GetScheduleOfType(Type);
 	}
+	}
+}
+
+//=========================================================
+// start task
+//=========================================================
+void CHassault::StartTask(Task_t* pTask)
+{
+	m_iTaskStatus = TASKSTATUS_RUNNING;
+
+	switch (pTask->iTask)
+	{
+	case TASK_Assault_CHECK_FIRE:
+		if (!NoFriendlyFire())
+		{
+			// need to add smth
+		}
+		TaskComplete();
+		break;
+
+	case TASK_Assault_SPEAK_SENTENCE:
+		SpeakSentence();
+		TaskComplete();
+		break;
+
+	case TASK_WALK_PATH:
+	case TASK_RUN_PATH:
+		// grunt no longer assumes he is covered if he moves
+		Forget(bits_MEMORY_INCOVER);
+		CSquadMonster::StartTask(pTask);
+		break;
+
+	case TASK_RELOAD:
+		m_IdealActivity = ACT_RELOAD;
+		break;
+
+	case TASK_Assault_FACE_TOSS_DIR:
+		break;
+
+	case TASK_FACE_IDEAL:
+	case TASK_FACE_ENEMY:
+		CSquadMonster::StartTask(pTask);
+		break;
+
+	default:
+		CSquadMonster::StartTask(pTask);
+		break;
+	}
+}
+
+//=========================================================
+// RunTask
+//=========================================================
+void CHassault::RunTask(Task_t* pTask)
+{
+	switch (pTask->iTask)
+	{
+	case TASK_Assault_FACE_TOSS_DIR:
+	{
+		// project a point along the toss vector and turn to face that point.
+		MakeIdealYaw(pev->origin + m_vecTossVelocity * 64);
+		ChangeYaw(pev->yaw_speed);
+
+		if (FacingIdeal())
+		{
+			m_iTaskStatus = TASKSTATUS_COMPLETE;
+		}
+		break;
+	}
+	default:
+	{
+		CSquadMonster::RunTask(pTask);
+		break;
+	}
+	}
+}
+
+//=========================================================
+// Speak Sentence - say your cued up sentence.
+//
+// Some grunt sentences (take cover and charge) rely on actually
+// being able to execute the intended action. It's really lame
+// when a grunt says 'COVER ME' and then doesn't move. The problem
+// is that the sentences were played when the decision to TRY
+// to move to cover was made. Now the sentence is played after
+// we know for sure that there is a valid path. The schedule
+// may still fail but in most cases, well after the grunt has
+// started moving.
+//=========================================================
+void CHassault::SpeakSentence()
+{
+	if (m_iSentence == HASSAULT_SENT_NONE)
+	{
+		// no sentence cued up.
+		return;
+	}
+
+	if (FOkToSpeak())
+	{
+		SENTENCEG_PlayRndSz(ENT(pev), pAssaultSentences[m_iSentence], HASSAULT_SENTENCE_VOLUME, HASSAULT_ATTN, 0, 100);
+		JustSpoke();
 	}
 }
