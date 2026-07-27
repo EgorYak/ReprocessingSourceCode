@@ -1574,7 +1574,7 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		return false;
 
 	int iShouldDrawLegs = (!g_iDrawLegs && m_pCurrentEntity == gEngfuncs.GetLocalPlayer()) ? 1 : 0;
-
+	/*
 	if (iShouldDrawLegs && !cam_thirdperson)
 	{
 		char modelname[256];
@@ -1586,6 +1586,7 @@ bool CStudioModelRenderer::StudioDrawPlayer(int flags, entity_state_t* pplayer)
 		//m_pRenderModel = IEngineStudio.Mod_ForName("models/player.mdl", 1);
 	}
 	else
+	*/
 		m_pRenderModel = IEngineStudio.SetupPlayerModel(m_nPlayerIndex);
 
 

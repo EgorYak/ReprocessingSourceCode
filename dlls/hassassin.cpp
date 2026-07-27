@@ -39,6 +39,7 @@ enum
 	SCHED_ASSASSIN_JUMP,	// fly through the air
 	SCHED_ASSASSIN_JUMP_ATTACK,	// fly through the air and shoot
 	SCHED_ASSASSIN_JUMP_LAND, // hit and run away
+	SCHED_ASSASSIN_JUMP_CHASE,
 };
 
 //=========================================================
@@ -73,6 +74,28 @@ enum
 
 #define bits_MEMORY_BADJUMP		(bits_MEMORY_CUSTOM1)
 
+#define HASSASSIN_JUMP_HEIGHT 360.0f
+
+struct LaunchToHeightResult
+{
+	float height;
+	float gravity;
+	float time;
+	float speed;
+};
+
+LaunchToHeightResult CalcLaunchToHeight(float height)
+{
+	LaunchToHeightResult result;
+	result.height = height;
+	result.gravity = g_psv_gravity->value;
+	if (result.gravity <= 1)
+		result.gravity = 1;
+	result.time = sqrt(height * 2.0f / result.gravity);
+	result.speed = result.gravity * result.time;
+	return result;
+}
+
 class CHAssassin : public CSquadMonster
 {
 public:
@@ -99,7 +122,15 @@ public:
 	void IdleSound(void);
 	bool TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
 
-	void DeadUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	void EXPORT DeadUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	float JumpSpeedFactor(float jumpHeight = HASSASSIN_JUMP_HEIGHT) const
+	{
+		auto result = CalcLaunchToHeight(jumpHeight);
+		return result.speed / jumpHeight;
+	}
+	Vector CalcMonsterJump(const Vector& vecTarget, float maximumHeight, float maximumDistance, int &result);
+	bool FindJumpToSpot(const Vector& vecTarget);
+	bool FindJumpToEntity(CBaseEntity* pEntity);
 
 	//virtual int	ObjectCaps(void) { return CSquadMonster::ObjectCaps() | FCAP_IMPULSE_USE; }
 
@@ -625,7 +656,8 @@ Task_t	tlAssassinTakeCoverFromEnemy[] =
 {
 	//{ TASK_STOP_MOVING,				(float)0					},
 	//{ TASK_WAIT,					(float)0.1					},
-	{ TASK_SET_FAIL_SCHEDULE,		(float)SCHED_RANGE_ATTACK1	},
+	//{ TASK_SET_FAIL_SCHEDULE,		(float)SCHED_RANGE_ATTACK1	},
+	{ TASK_SET_FAIL_SCHEDULE,		(float)SCHED_MELEE_ATTACK1	},
 	{ TASK_FIND_COVER_FROM_ENEMY,	(float)0					},
 	{ TASK_RUN_PATH,				(float)0					},
 	{ TASK_WAIT_FOR_MOVEMENT,		(float)0					},
@@ -746,6 +778,7 @@ Schedule_t	slAssassinHide[] =
 //=========================================================
 Task_t tlAssassinHunt[] =
 {
+	{ TASK_SET_FAIL_SCHEDULE, (float)SCHED_CHASE_ENEMY_FAILED },
 	{ TASK_GET_PATH_TO_ENEMY,	(float)0		},
 	{ TASK_RUN_PATH,			(float)0		},
 	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
@@ -841,6 +874,24 @@ Schedule_t	slAssassinJumpLand[] =
 	},
 };
 
+Task_t tlAssassinJumpChase[] =
+{
+	{ TASK_STOP_MOVING, (float)0 },
+	{ TASK_PLAY_SEQUENCE, (float)ACT_HOP },
+	{ TASK_ASSASSIN_FALL_TO_GROUND, (float)0 },
+};
+
+Schedule_t slAssassinJumpChase[] =
+{
+	{
+		tlAssassinJumpChase,
+		ARRAYSIZE(tlAssassinJumpChase),
+		0,
+		0,
+		"AssassinJumpChase"
+	},
+};
+
 DEFINE_CUSTOM_SCHEDULES(CHAssassin)
 {
 	slAssassinFail,
@@ -853,6 +904,7 @@ DEFINE_CUSTOM_SCHEDULES(CHAssassin)
 		slAssassinJump,
 		slAssassinJumpAttack,
 		slAssassinJumpLand,
+		slAssassinJumpChase,
 };
 
 IMPLEMENT_CUSTOM_SCHEDULES(CHAssassin, CSquadMonster);
@@ -1322,9 +1374,263 @@ Schedule_t* CHAssassin::GetScheduleOfType(int Type)
 		return slAssassinJumpAttack;
 	case SCHED_ASSASSIN_JUMP_LAND:
 		return slAssassinJumpLand;
+	case SCHED_ASSASSIN_JUMP_CHASE:
+		return slAssassinJumpChase;
+	case SCHED_CHASE_ENEMY_FAILED:
+		{
+			if (m_flNextJump <= gpGlobals->time && FindJumpToEntity(m_hEnemy))
+			{
+				m_flNextJump = gpGlobals->time + 1.0f;
+				return GetScheduleOfType(SCHED_ASSASSIN_JUMP_CHASE);
+			}
+		}
 	}
 
 	return CSquadMonster::GetScheduleOfType(Type);
+}
+
+static Vector TraceBottom(const Vector& pos, edict_t* pIgnore, float deepness = 500)
+{
+	TraceResult tr;
+	UTIL_TraceLine(pos, pos - Vector(0, 0, deepness), ignore_monsters, pIgnore, &tr);
+	return tr.vecEndPos;
+}
+
+enum
+{
+	MONSTERJUMP_OK = 0,
+	MONSTERJUMP_CLOSE_IN_2D,
+	MONSTERJUMP_TOOFAR_SOLID,
+	MONSTERJUMP_TOOFAR_TOODEEP,
+	MONSTERJUMP_TOOHIGH,
+	MONSTERJUMP_NO_TRACE_TO_APEX
+};
+
+Vector CHAssassin::CalcMonsterJump(const Vector &vecTarget, float maximumHeight, float maximumDistance, int &result)
+{
+	const float myHeight = pev->size.z;
+	const float halfMyHeight = myHeight * 0.5f;
+	const Vector halfMyHeightVec(0.0f, 0.0f, halfMyHeight);
+	Vector vecChosenDest = vecTarget;
+
+	const Vector2D vec2DDist = (vecChosenDest - pev->origin).Make2D();
+	const float dist2DSqr = vec2DDist.Length() * vec2DDist.Length();
+	const bool isTooFar = dist2DSqr > maximumDistance * maximumDistance;
+	const bool isTooCloseIn2D = dist2DSqr < 48.0f * 48.0f;
+	if (isTooCloseIn2D)
+	{
+		result = MONSTERJUMP_CLOSE_IN_2D;
+		return g_vecZero;
+	}
+
+	// Can't jump that far. Just jump to get closer
+	if (isTooFar)
+	{
+		const Vector2D horizontalShift = vec2DDist.Normalize() * maximumDistance;
+		vecChosenDest.x = pev->origin.x + horizontalShift.x;
+		vecChosenDest.y = pev->origin.y + horizontalShift.y;
+
+		if (UTIL_PointContents(vecChosenDest) == CONTENTS_SOLID)
+		{
+			result = MONSTERJUMP_TOOFAR_SOLID;
+			return g_vecZero;
+		}
+
+		Vector bottom = TraceBottom(vecChosenDest, edict());
+		if (bottom.z + 8.0f < V_min(pev->origin.z, vecChosenDest.z))
+		{
+			//DrawBeamLine(vecChosenDest, bottom, Color3(255, 100, 50));
+			const Vector2D halfHorizontalShift = horizontalShift * 0.5f;
+			vecChosenDest.x = pev->origin.x + halfHorizontalShift.x;
+			vecChosenDest.y = pev->origin.y + halfHorizontalShift.y;
+
+			if (UTIL_PointContents(vecChosenDest) == CONTENTS_SOLID)
+			{
+				result = MONSTERJUMP_TOOFAR_TOODEEP;
+				return g_vecZero;
+			}
+			else
+			{
+				bottom = TraceBottom(vecChosenDest, edict());
+				if (bottom.z + 8.0f < V_min(pev->origin.z, vecChosenDest.z))
+				{
+					result = MONSTERJUMP_TOOFAR_TOODEEP;
+					return g_vecZero;
+				}
+			}
+		}
+	}
+
+	Vector midPoint = (vecChosenDest + pev->origin) * 0.5f;
+
+	TraceResult mindpointTr;
+	UTIL_TraceLine(midPoint, midPoint + Vector(0, 0, V_max(500.0f, maximumHeight + myHeight)), ignore_monsters, edict(), &mindpointTr);
+	const float ceilingZ = mindpointTr.vecEndPos.z;
+
+	const float jumpMinZ = V_max(vecChosenDest.z, pev->origin.z) + halfMyHeight * 0.5f;
+	const float jumpMaxZ = V_max(ceilingZ - myHeight, jumpMinZ);
+
+	if (jumpMinZ - pev->origin.z > maximumHeight)
+	{
+		result = MONSTERJUMP_TOOHIGH;
+		return g_vecZero;
+	}
+
+	Vector vecApex = midPoint;
+	vecApex.z = V_min(pev->origin.z + maximumHeight, jumpMaxZ);
+
+	const Vector vecTraceHullStart = pev->origin + halfMyHeightVec;
+	const Vector vectraceHullEnd = vecApex + halfMyHeightVec;
+
+	TraceResult tr;
+	UTIL_TraceHull(vecTraceHullStart, vectraceHullEnd, dont_ignore_monsters, human_hull, edict(), &tr);
+
+	if (!tr.fStartSolid && tr.flFraction == 1.0f)
+	{
+		//DrawBeamLine(vecTraceHullStart, vectraceHullEnd, Color3(0, 255, 0));
+
+		auto launchCalcResult = CalcLaunchToHeight(vecApex.z - pev->origin.z);
+
+		Vector velocity;
+		velocity.x = (vecApex.x - pev->origin.x) / launchCalcResult.time;
+		velocity.y = (vecApex.y - pev->origin.y) / launchCalcResult.time;
+		velocity.z = launchCalcResult.speed;
+		result = MONSTERJUMP_OK;
+		return velocity;
+	}
+	else
+	{
+		//DrawBeamLine(vecTraceHullStart, vectraceHullEnd, Color3(255, 0, 0));
+		result = MONSTERJUMP_NO_TRACE_TO_APEX;
+		return g_vecZero;
+	}
+}
+
+bool CHAssassin::FindJumpToSpot(const Vector& vecTarget)
+{
+	const float horizontalJumpDistance = 360.0f;
+
+	const Vector2D vec2DDist = (vecTarget - pev->origin).Make2D();
+	const float dist2DSqr = vec2DDist.Length() * vec2DDist.Length();
+	const bool isTooCloseIn2D = dist2DSqr < 48.0f * 48.0f;
+
+	if (isTooCloseIn2D)
+	{
+		if (std::fabs(pev->origin.z - vecTarget.z) <= pev->size.z)
+		{
+			// Refuse early
+			//ALERT(at_console, "%s: already is close to the target\n", STRING(pev->classname));
+			return false;
+		}
+		if (pev->origin.z < vecTarget.z)
+		{
+			// The target is on top. Can't handle it for now
+			return false;
+		}
+
+		// The target is underneath. Try jump off to it
+		float directions[][2] = {
+			{1, 0},
+			{-1, 0},
+			{0, 1},
+			{0, -1}
+		};
+
+		const float spotOffset = V_min(128.0f, horizontalJumpDistance);
+
+		const size_t indexShift = RANDOM_LONG(0, ARRAYSIZE(directions) - 1);
+
+		for (size_t i = 0; i < ARRAYSIZE(directions); ++i)
+		{
+			size_t j = (i + indexShift) % ARRAYSIZE(directions);
+			const auto& randomDir = directions[j];
+
+			Vector vecSpot = pev->origin + Vector(randomDir[0] * spotOffset, randomDir[1] * spotOffset, 0.0f);
+			vecSpot.z = vecTarget.z;
+
+			int result;
+			auto jumpResult = CalcMonsterJump(vecSpot, HASSASSIN_JUMP_HEIGHT, horizontalJumpDistance, result);
+			if (jumpResult != g_vecZero)
+			{
+				m_vecJumpVelocity = jumpResult;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	//TODO: calculate this depending on the monster and player geometry?
+	//const FloatRange baseOffsetRange(45.0f, 50.0f); // don't jump right onto the target
+
+	const Vector2D vecTarget2D = vecTarget.Make2D();
+	const Vector2D vecToTarget = vecTarget2D - pev->origin.Make2D();
+	const Vector2D dirToTarget = vecToTarget.Normalize();
+	const Vector2D inFrontOfTarget = vecTarget2D - dirToTarget;//* RandomizeNumberFromRange(baseOffsetRange);
+	const Vector2D toRightFromTarget = vecTarget2D + Vector2D(dirToTarget.y, -dirToTarget.x);// *RandomizeNumberFromRange(baseOffsetRange);
+	const Vector2D toLeftFromTarget = vecTarget2D + Vector2D(-dirToTarget.y, dirToTarget.x);// *RandomizeNumberFromRange(baseOffsetRange);
+
+	const Vector possibleTargets[] = {
+		Vector(inFrontOfTarget, vecTarget.z),
+		Vector(toRightFromTarget, vecTarget.z),
+		Vector(toLeftFromTarget, vecTarget.z)
+	};
+
+	const size_t indexShift = RANDOM_LONG(0, ARRAYSIZE(possibleTargets) - 1);
+
+	for (size_t i = 0; i < ARRAYSIZE(possibleTargets); ++i)
+	{
+		size_t j = (i + indexShift) % ARRAYSIZE(possibleTargets);
+
+		const Vector& vecPossibleTarget = possibleTargets[j];
+		const Vector bottom = TraceBottom(vecPossibleTarget, edict());
+
+		if (bottom.z + 8.0f < V_min(pev->origin.z, vecPossibleTarget.z))
+		{
+			continue;
+		}
+
+		int result;
+		auto jumpResult = CalcMonsterJump(vecPossibleTarget, HASSASSIN_JUMP_HEIGHT, horizontalJumpDistance, result);
+		if (jumpResult != g_vecZero)
+		{
+			m_vecJumpVelocity = jumpResult;
+			//ALERT(at_console, "%s: vertical jump velocity: %g; horizontal jump velocity: %g\n", STRING(pev->classname), m_vecJumpVelocity.z, m_vecJumpVelocity.Make2D().Length());
+			return true;
+		}
+		else
+		{
+			/*switch(jumpResult.second)
+			{
+			case MONSTERJUMP_CLOSE_IN_2D:
+				ALERT(at_console, "%s can't make jump: is already too close\n", STRING(pev->classname));
+				break;
+			case MONSTERJUMP_TOOFAR_SOLID:
+				ALERT(at_console, "%s can't make jump: the target is to far and the new selected point is in solid volume\n", STRING(pev->classname));
+				break;
+			case MONSTERJUMP_TOOFAR_TOODEEP:
+				ALERT(at_console, "%s can't make jump: new selected point is too deep\n", STRING(pev->classname));
+				break;
+			case MONSTERJUMP_TOOHIGH:
+				ALERT(at_console, "%s can't make jump: too high!\n", STRING(pev->classname));
+				break;
+			default:
+				ALERT(at_console, "%s can't make jump: can't calculate jump\n", STRING(pev->classname));
+				break;
+			}*/
+		}
+	}
+
+	return false;
+}
+
+bool CHAssassin::FindJumpToEntity(CBaseEntity* pEntity)
+{
+	if (!pEntity)
+		return false;
+
+	const Vector vecTarget(pEntity->pev->origin.x, pEntity->pev->origin.y, pEntity->pev->absmin.z + 1.0f);
+	return FindJumpToSpot(vecTarget);
 }
 
 #endif

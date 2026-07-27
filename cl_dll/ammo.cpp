@@ -496,7 +496,7 @@ void WeaponsResource::SelectSlot(int iSlot, bool fAdvance, int iDirection)
 		gpActiveSel = p;
 }
 
-#undef SetCrosshair
+//#undef SetCrosshair
 void CHudAmmo::SetCrosshair_Alt(HSPRITE WSpr, Rect WRect, int r, int g, int b)
 {
 	hActualCross = WSpr;
@@ -518,9 +518,12 @@ void CHudAmmo::DrawCrosshair()
 		gWR.CountAmmo(m_pWeapon->iAmmoType) == 0) \
 		)
 	{
+		UnpackRGB(r, g, b, RGB_REDISH);
+		/*
 		r = 250;
 		g = 0;
 		b = 0;
+		*/
 	}
 	else
 	{
@@ -537,7 +540,7 @@ void CHudAmmo::DrawCrosshair()
 	SPR_Set(hActualCross, r, g, b);
 	SPR_DrawAdditive(0, x, y, &rcActualCross);
 }
-#define SetCrosshair CHudAmmo::SetCrosshair_Alt
+#define SetCrosshair_alt CHudAmmo::SetCrosshair_Alt
 
 //------------------------------------------------------------------------
 // Message Handlers
@@ -606,12 +609,12 @@ bool CHudAmmo::MsgFunc_HideWeapon(const char* pszName, int iSize, void* pbuf)
 	{
 		static Rect nullrc;
 		gpActiveSel = NULL;
-		SetCrosshair(0, nullrc, 0, 0, 0);
+		SetCrosshair_alt(0, nullrc, 0, 0, 0);
 	}
 	else
 	{
 		if (m_pWeapon)
-			SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
+			SetCrosshair_alt(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
 	}
 
 	return true;
@@ -641,7 +644,7 @@ bool CHudAmmo::MsgFunc_CurWeapon(const char* pszName, int iSize, void* pbuf)
 
 	if (iId < 1)
 	{
-		SetCrosshair(0, nullrc, 0, 0, 0);
+		SetCrosshair_alt(0, nullrc, 0, 0, 0);
 		m_pWeapon = nullptr;
 		return false;
 	}
@@ -679,16 +682,16 @@ bool CHudAmmo::MsgFunc_CurWeapon(const char* pszName, int iSize, void* pbuf)
 	if (gHUD.m_iFOV >= 90)
 	{ // normal crosshairs
 		if (fOnTarget && 0 != m_pWeapon->hAutoaim)
-			SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 255, 255);
+			SetCrosshair_alt(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 255, 255);
 		else
-			SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
+			SetCrosshair_alt(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
 	}
 	else
 	{ // zoomed crosshairs
 		if (fOnTarget && 0 != m_pWeapon->hZoomedAutoaim)
-			SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
+			SetCrosshair_alt(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
 		else
-			SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
+			SetCrosshair_alt(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
 	}
 
 	m_fFade = 200.0f; //!!!
@@ -921,6 +924,8 @@ bool CHudAmmo::Draw(float flTime)
 	if ((pw->iAmmoType < 0) && (pw->iAmmo2Type < 0))
 		return false;
 
+	// draw crosshair
+	DrawCrosshair();
 
 	int iFlags = DHN_DRAWZERO; // draw 0 values
 
@@ -934,8 +939,6 @@ bool CHudAmmo::Draw(float flTime)
 	UnpackRGB(r, g, b, RGB_YELLOWISH);
 
 	ScaleColors(r, g, b, a);
-
-	DrawCrosshair();
 
 	// Does this weapon have a clip?
 	//y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;

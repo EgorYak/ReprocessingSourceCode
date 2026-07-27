@@ -86,6 +86,8 @@ public:
 	{
 	}
 
+	constexpr Vector(const Vector2D& vec2D, float Z) : x(vec2D.x), y(vec2D.y), z(Z) {}
+
 	// Operators
 	[[nodiscard]] constexpr Vector operator-() const { return Vector(-x, -y, -z); }
 	[[nodiscard]] constexpr bool operator==(const Vector& v) const { return x == v.x && y == v.y && z == v.z; }

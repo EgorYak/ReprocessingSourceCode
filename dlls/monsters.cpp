@@ -3069,10 +3069,10 @@ float NPC_Step(CBaseMonster *pMonster)
 	switch (pMonster->m_Activity)
 	{
 	case ACT_WALK:
-		fvol = 0.7;//Ходьба, громкость 0.7
+		fvol = 0.6;//Ходьба, громкость 0.7
 		break;
 	case ACT_RUN:
-		fvol = 1.0;//Бег, громкость 1.0
+		fvol = 0.8;//Бег, громкость 1.0
 		break;
 	default:
 		fvol = 0.5;//Дефолт, при любых других активностях громкость будет равна 0.5
