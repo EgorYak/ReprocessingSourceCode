@@ -827,10 +827,14 @@ void CGraph::CheckNode(Vector vecOrigin, int iNode)
 
 	if (flDist < m_flShortest)
 	{
+		// Freeslave
 		TraceResult tr;
 
+		Vector vecStart = vecOrigin;
+		vecStart.z += NODE_HEIGHT;
+
 		// make sure that vecOrigin can trace to this node!
-		UTIL_TraceLine(vecOrigin, m_pNodes[iNode].m_vecOriginPeek, ignore_monsters, 0, &tr);
+		UTIL_TraceLine(vecStart, m_pNodes[iNode].m_vecOriginPeek, ignore_monsters, 0, &tr);
 
 		if (tr.flFraction == 1.0)
 		{
@@ -2057,9 +2061,14 @@ void CTestHull::BuildNodeGraph()
 
 						if (!WALK_MOVE(ENT(pev), flYaw, stepSize, MoveMode))
 						{ // can't take the next step
-
-							fWalkFailed = true;
-							break;
+							// Freeslave - additional check
+							if (fWalkFailed) {
+								UTIL_SetOrigin(pev, pSrcNode->m_vecOrigin - Vector(0, 0, NODE_HEIGHT));
+								fWalkFailed = !WALK_MOVE(ENT(pev), flYaw, stepSize, MoveMode);
+								UTIL_SetOrigin(pev, pSrcNode->m_vecOrigin);
+							}
+							if (fWalkFailed)
+								break;
 						}
 					}
 
@@ -3149,6 +3158,8 @@ void CGraph::BuildRegionTables()
 					int Tmp = m_di[j].m_SortedBy[i];
 					m_di[j].m_SortedBy[i] = m_di[k].m_SortedBy[i];
 					m_di[k].m_SortedBy[i] = Tmp;
+					// Freeslave fix for sorting
+					jCode = kCode;
 				}
 			}
 		}

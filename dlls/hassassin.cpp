@@ -158,6 +158,8 @@ public:
 	int		m_iFrustration;
 
 	int		m_iShell;
+
+	bool m_bHeadshot;
 };
 LINK_ENTITY_TO_CLASS(monster_human_assassin, CHAssassin);
 
@@ -176,6 +178,8 @@ TYPEDESCRIPTION	CHAssassin::m_SaveData[] =
 
 	DEFINE_FIELD(CHAssassin, m_iTargetRanderamt, FIELD_INTEGER),
 	DEFINE_FIELD(CHAssassin, m_iFrustration, FIELD_INTEGER),
+
+	DEFINE_FIELD(CHAssassin, m_bHeadshot, FIELD_BOOLEAN),
 };
 
 IMPLEMENT_SAVERESTORE(CHAssassin, CSquadMonster);

@@ -142,6 +142,7 @@ public:
 	void SetActivity(Activity NewActivity) override;
 	void StartTask(Task_t* pTask) override;
 	void RunTask(Task_t* pTask) override;
+	void Killed(entvars_t* pevAttacker, int iGib) override;
 	void DeathSound() override;
 	void PainSound() override;
 	void IdleSound() override;
@@ -191,6 +192,10 @@ public:
 	int m_iShotgunShell;
 
 	int m_iSentence;
+	bool m_bHeadshot;
+
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
 
 	static const char* pGruntSentences[];
 };
@@ -211,6 +216,8 @@ TYPEDESCRIPTION CHGrunt::m_SaveData[] =
 		//  DEFINE_FIELD( CShotgun, m_iBrassShell, FIELD_INTEGER ),
 		//  DEFINE_FIELD( CShotgun, m_iShotgunShell, FIELD_INTEGER ),
 		DEFINE_FIELD(CHGrunt, m_iSentence, FIELD_INTEGER),
+		DEFINE_FIELD(CHGrunt, m_bHeadshot, FIELD_BOOLEAN),
+		DEFINE_FIELD(CHGrunt, m_iBuckshotInHead, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CHGrunt, CSquadMonster);
@@ -655,7 +662,33 @@ void CHGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir,
 		ExplosionCreate(ptr->vecEndPos, pev->angles, edict(), 100, true);
 		Killed(pevAttacker, GIB_ALWAYS);
 	}
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
 	CSquadMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
+//=========================================================
+// Killed
+//=========================================================
+void CHGrunt::Killed(entvars_t* pevAttacker, int iGib)
+{
+	CSquadMonster::Killed(pevAttacker, iGib);
 }
 
 
@@ -668,6 +701,14 @@ bool CHGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float 
 {
 	Forget(bits_MEMORY_INCOVER);
 
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+	}
+
+	m_bHeadshot = 0;
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
@@ -1224,6 +1265,11 @@ void CHGrunt::Precache()
 	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 	m_iRifleShell = PRECACHE_MODEL("models/556shell.mdl"); // brass shell
 	m_iShotgunShell = PRECACHE_MODEL("models/shotgunshell.mdl");
+
+	PRECACHE_SOUND("hgrunt/gr_step1.wav");
+	PRECACHE_SOUND("hgrunt/gr_step2.wav");
+	PRECACHE_SOUND("hgrunt/gr_step3.wav");
+	PRECACHE_SOUND("hgrunt/gr_step4.wav");
 }
 
 //=========================================================
@@ -1351,6 +1397,11 @@ void CHGrunt::PainSound()
 //=========================================================
 void CHGrunt::DeathSound()
 {
+	if (m_bHeadshot)
+	{
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "hit/nohead_death1.wav", 1, ATTN_IDLE);
+		return;
+	}
 	switch (RANDOM_LONG(0, 2))
 	{
 	case 0:
@@ -2730,11 +2781,17 @@ void CDeadHSarge::Spawn()
 // ********** NamGrunt **********
 //=========================================================
 
+#define HEAD_GROUP 0
+#define HEAD_SHOT 2
+
 class CNamGrunt : public CHGrunt
 {
 public:
 	void Spawn() override;
 	void Precache() override;
+	void DeathSound() override;
+	void PainSound() override;
+	void IdleSound() override;
 	int Classify() { return CLASS_ALIEN_MILITARY; };
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	void GibMonster() override;
@@ -2801,20 +2858,9 @@ void CNamGrunt::Spawn()
 	}
 	m_cAmmoLoaded = m_cClipSize;
 
-	if (RANDOM_LONG(0, 99) < 80)
-		pev->skin = RANDOM_FLOAT(0, 5); // random skins
+	SetBodygroup(1, RANDOM_LONG(0, 1));
 
-	if (GetBodygroup(1) == HEAD_COMMANDER)
-		pev->skin = RANDOM_FLOAT(0, 5); // HACK! random skins for commander
-
-	if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
-	{
-		SetBodygroup(HEAD_GROUP, HEAD_SHOTGUN);
-	}
-	else if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
-	{
-		SetBodygroup(HEAD_GROUP, HEAD_M203);
-	}
+	SetBodygroup(0, RANDOM_LONG(0, 1));
 
 	CTalkMonster::g_talkWaitTime = 0;
 
@@ -2836,15 +2882,15 @@ void CNamGrunt::Precache()
 	PRECACHE_SOUND("hgrunt/m161.wav");
 	PRECACHE_SOUND("hgrunt/m162.wav");
 
-	PRECACHE_SOUND("hgrunt/gr_die1.wav");
-	PRECACHE_SOUND("hgrunt/gr_die2.wav");
-	PRECACHE_SOUND("hgrunt/gr_die3.wav");
+	PRECACHE_SOUND("old_friend/alert1.wav");
+	PRECACHE_SOUND("old_friend/alert2.wav");
+	PRECACHE_SOUND("old_friend/die1.wav");
 
-	PRECACHE_SOUND("hgrunt/gr_pain1.wav");
-	PRECACHE_SOUND("hgrunt/gr_pain2.wav");
-	PRECACHE_SOUND("hgrunt/gr_pain3.wav");
-	PRECACHE_SOUND("hgrunt/gr_pain4.wav");
-	PRECACHE_SOUND("hgrunt/gr_pain5.wav");
+	PRECACHE_SOUND("old_friend/die2.wav");
+	PRECACHE_SOUND("old_friend/die3.wav");
+	PRECACHE_SOUND("old_friend/idle1.wav");
+	PRECACHE_SOUND("old_friend/idle2.wav");
+	PRECACHE_SOUND("old_friend/idle3.wav");
 
 	PRECACHE_SOUND("hgrunt/gr_reload1.wav");
 
@@ -2869,6 +2915,74 @@ void CNamGrunt::Precache()
 	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 	m_iRifleShell = PRECACHE_MODEL("models/556shell.mdl"); // brass shell
 	m_iShotgunShell = PRECACHE_MODEL("models/shotgunshell.mdl");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
+}
+
+//=========================================================
+// PainSound
+//=========================================================
+void CNamGrunt::PainSound()
+{
+	if (gpGlobals->time > m_flNextPainTime)
+	{
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/alert1.wav", 1, ATTN_NORM);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/alert2.wav", 1, ATTN_NORM);
+			break;
+		}
+
+		m_flNextPainTime = gpGlobals->time + 1;
+	}
+}
+
+//=========================================================
+// DeathSound
+//=========================================================
+void CNamGrunt::DeathSound()
+{
+	if (m_bHeadshot)
+	{
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "hit/nohead_death1.wav", 1, ATTN_IDLE);
+		return;
+	}
+	switch (RANDOM_LONG(0, 2))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/die1.wav", 1, ATTN_IDLE);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/die2.wav", 1, ATTN_IDLE);
+		break;
+	case 2:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/die3.wav", 1, ATTN_IDLE);
+		break;
+	}
+}
+
+void CNamGrunt::IdleSound()
+{
+	if (FOkToSpeak() && (0 != g_fGruntQuestion || RANDOM_LONG(0, 1)))
+	{
+		switch (RANDOM_LONG(0, 2))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/idle1.wav", 1, ATTN_IDLE);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/idle2.wav", 1, ATTN_IDLE);
+			break;
+		case 2:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "old_friend/idle3.wav", 1, ATTN_IDLE);
+			break;
+		}
+		JustSpoke();
+	}
 }
 
 //=========================================================
@@ -2905,16 +3019,16 @@ void CNamGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 		}
 		else if (FBitSet(pev->weapons, HGRUNT_9MMAR))
 		{
-			Shoot();
+			ShootM16();
 
 			// the first round of the three round burst plays the sound and puts a sound in the world sound list.
 			if (RANDOM_LONG(0, 1))
 			{
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun1.wav", 1, ATTN_NORM);
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/m161.wav", 1, ATTN_NORM);
 			}
 			else
 			{
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/gr_mgun2.wav", 1, ATTN_NORM);
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "hgrunt/m162.wav", 1, ATTN_NORM);
 			}
 		}
 		else if (FBitSet(pev->weapons, HGRUNT_RPG))

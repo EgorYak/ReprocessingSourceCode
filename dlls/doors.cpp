@@ -386,6 +386,13 @@ void CBaseDoor::Precache()
 		break;
 	}
 
+	if (m_bHealthValue)
+	{
+		PRECACHE_SOUND("items/meddoor.wav");
+		pev->noiseMoving = ALLOC_STRING("items/meddoor.wav");
+		PRECACHE_SOUND("items/wallmedkit.wav");
+	}
+
 	// get door button sounds, for doors which are directly 'touched' to open
 
 	if (0 != m_bLockedSound)
@@ -541,7 +548,10 @@ bool CBaseDoor::DoorActivate()
 		{ // give health if player opened the door (medikit)
 			// VARS( m_eoActivator )->health += m_bHealthValue;
 			if (m_hActivator->pev->health < m_hActivator->pev->max_health)
+			{
 				m_hActivator->TakeHealth(m_bHealthValue, DMG_GENERIC);
+				EMIT_SOUND(m_hActivator->edict(), CHAN_ITEM, "items/wallmedkit.wav", VOL_NORM, ATTN_NORM);
+			}
 			else
 			{
 				heal = false;

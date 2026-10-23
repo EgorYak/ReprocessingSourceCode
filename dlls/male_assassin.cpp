@@ -86,7 +86,8 @@ enum MAssassinHead
 	Random = -1,
 	White = 0,
 	Black,
-	ThermalVision
+	ThermalVision,
+	Headshot
 };
 }
 
@@ -217,6 +218,8 @@ public:
 
 	int m_iAssassinHead;
 
+	bool m_bHeadshot;
+
 	static const char *pGruntSentences[];
 };
 
@@ -240,6 +243,7 @@ TYPEDESCRIPTION	CMOFAssassin::m_SaveData[] =
 	DEFINE_FIELD( CMOFAssassin, m_flLastShot, FIELD_TIME ),
 	DEFINE_FIELD( CMOFAssassin, m_fStandingGround, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMOFAssassin, m_flStandGroundRange, FIELD_FLOAT ),
+	DEFINE_FIELD(CMOFAssassin, m_bHeadshot, FIELD_BOOLEAN),
 };
 
 IMPLEMENT_SAVERESTORE( CMOFAssassin, CSquadMonster );

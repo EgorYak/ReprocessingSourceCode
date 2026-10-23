@@ -107,6 +107,7 @@ TYPEDESCRIPTION CBasePlayer::m_playerSaveData[] =
 		DEFINE_FIELD(CBasePlayer, m_tbdPrev, FIELD_TIME),
 
 		DEFINE_FIELD(CBasePlayer, m_iTrack, FIELD_INTEGER), // mp3 playmemory
+		DEFINE_FIELD(CBasePlayer, m_iSpeed, FIELD_INTEGER), // for saverestore player_changespeed
 
 		DEFINE_FIELD(CBasePlayer, m_pTank, FIELD_EHANDLE),
 		DEFINE_FIELD(CBasePlayer, m_hViewEntity, FIELD_EHANDLE),
@@ -119,6 +120,8 @@ TYPEDESCRIPTION CBasePlayer::m_playerSaveData[] =
 		//DEFINE_FIELD(CBasePlayer, m_flSndRange, FIELD_FLOAT),
 
 		DEFINE_FIELD(CBasePlayer, m_flStartCharge, FIELD_TIME),
+
+		DEFINE_FIELD(CBasePlayer, m_bIsDLC, FIELD_BOOLEAN),
 
 		//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 		//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games
@@ -2788,6 +2791,14 @@ edict_t* EntSelectSpawnPoint(CBaseEntity* pPlayer)
 	// If startspot is set, (re)spawn there.
 	if (FStringNull(gpGlobals->startspot) || 0 == strlen(STRING(gpGlobals->startspot)))
 	{
+		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_start_dlc");
+		if (!FNullEnt(pSpot))
+		{
+			CBasePlayer* pCBPlayer;
+			pCBPlayer = (CBasePlayer*)GET_PRIVATE(player);
+			pCBPlayer->m_bIsDLC = 1;
+			goto ReturnSpot;
+		}
 		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_start");
 		if (!FNullEnt(pSpot))
 			goto ReturnSpot;
@@ -2839,6 +2850,7 @@ void CBasePlayer::Spawn()
 	pev->friction = 1.0;
 	pev->gravity = 1.0;
 	m_iTrack = -1;
+	m_iSpeed = 0;
 	m_bitsHUDDamage = -1;
 	m_bitsDamageType = 0;
 	m_afPhysicsFlags = 0;
@@ -2911,6 +2923,8 @@ void CBasePlayer::Spawn()
 	m_lastx = m_lasty = 0;
 
 	m_flNextChatTime = gpGlobals->time;
+
+	SET_VIEW(edict(), edict()); // FreeSlave - Fix client having wrong view entity after using camera and doing restart/map change on GoldSource.
 
 	g_pGameRules->PlayerSpawn(this);
 }
@@ -4262,6 +4276,10 @@ void CBasePlayer::UpdateClientData()
 			if (m_iTrack >= -1 && m_iTrack <= 30)
 				RestoreCDTrack(m_iTrack);
 		}
+		if (m_iSpeed)
+		{
+			g_engfuncs.pfnSetClientMaxspeed(edict(), m_iSpeed);
+		}
 	}
 
 	// Update Flashlight
@@ -5311,6 +5329,37 @@ void CChangeSpeed::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE u
 
 	if (pPlayer)
 	{
+		pPlayer->m_iSpeed = pev->health;
 		g_engfuncs.pfnSetClientMaxspeed(pPlayer->edict(), pev->health);
+	}
+}
+
+class CChangeHealth : public CPointEntity
+{
+public:
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+};
+
+LINK_ENTITY_TO_CLASS(player_changehealth, CChangeHealth);
+
+void CChangeHealth::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	CBasePlayer* pPlayer = NULL;
+
+	if (pActivator && pActivator->IsPlayer())
+	{
+		pPlayer = (CBasePlayer*)pActivator;
+	}
+	else if (!g_pGameRules->IsDeathmatch())
+	{
+		pPlayer = (CBasePlayer*)UTIL_GetLocalPlayer();
+	}
+
+	if (pPlayer)
+	{
+		if (pev->health != -1)
+			pPlayer->pev->health = pev->health;
+		if (pev->armorvalue != -1)
+			pPlayer->pev->armorvalue = pev->armorvalue;
 	}
 }

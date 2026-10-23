@@ -1578,6 +1578,11 @@ void CShowelGrunt::Precache()
 {
 	PRECACHE_MODEL("models/hgrunt_melee.mdl");
 
+	PRECACHE_SOUND("hgrunt/gr_step1.wav");
+	PRECACHE_SOUND("hgrunt/gr_step2.wav");
+	PRECACHE_SOUND("hgrunt/gr_step3.wav");
+	PRECACHE_SOUND("hgrunt/gr_step4.wav");
+
 	PRECACHE_SOUND_ARRAY(pAttackHitSounds);
 	PRECACHE_SOUND_ARRAY(pAttackMissSounds);
 	PRECACHE_SOUND_ARRAY(pAttackSounds);

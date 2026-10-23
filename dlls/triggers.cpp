@@ -380,6 +380,38 @@ void CTriggerMonster::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYP
 		UTIL_Remove(this);
 }
 
+class CTriggerChangeSkin : public CBaseDelay
+{
+public:
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+};
+LINK_ENTITY_TO_CLASS(trigger_changeskin, CTriggerChangeSkin);
+
+
+void CTriggerChangeSkin::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	edict_t* pentTarget;
+
+	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(pev->message));
+	CBaseMonster* pTarget = NULL;
+
+	while (!FNullEnt(pentTarget))
+	{
+		if (FBitSet(VARS(pentTarget)->flags, FL_MONSTER))
+		{
+			pTarget = GetMonsterPointer(pentTarget);
+			pTarget->pev->skin = pev->skin;
+			pTarget->pev->body = pev->body;
+		}
+		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(pev->message));
+		pTarget = NULL;
+	}
+	pTarget = NULL;
+
+	if ((pev->spawnflags & SF_RELAY_FIREONCE) != 0)
+		UTIL_Remove(this);
+}
+
 
 //**********************************************************
 // The Multimanager Entity - when fired, will fire up to 16 targets
@@ -2959,4 +2991,220 @@ void CTriggerTelefrag::ClearThink()
 	}
 	m_iBeams = 0;
 	UTIL_Remove(this);
+}
+
+#include "scripted.h"
+
+class CTriggerStopSequence : public CBaseDelay
+{
+public:
+	void Spawn() override;
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+};
+LINK_ENTITY_TO_CLASS(trigger_stopsequence, CTriggerStopSequence);
+
+
+void CTriggerStopSequence::Spawn()
+{
+}
+
+
+
+
+void CTriggerStopSequence::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	edict_t* pentTarget;
+
+	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(pev->target));
+	CBaseMonster* pTarget = NULL;
+
+	while (!FNullEnt(pentTarget))
+	{
+		if (FBitSet(VARS(pentTarget)->flags, FL_MONSTER))
+		{
+			pTarget = GetMonsterPointer(pentTarget);
+			if (pTarget && pTarget->m_pCine)
+			{
+				pTarget->m_pCine->CancelScript();
+			}
+		}
+		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(pev->target));
+		pTarget = NULL;
+	}
+
+}
+
+class CTriggerKillMonster : public CBaseDelay
+{
+public:
+	void Spawn() override;
+	void Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value) override;
+};
+LINK_ENTITY_TO_CLASS(trigger_killmonster, CTriggerKillMonster);
+
+
+void CTriggerKillMonster::Spawn()
+{
+}
+
+
+
+
+void CTriggerKillMonster::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
+{
+	edict_t* pentTarget;
+
+	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(pev->target));
+	CBaseMonster* pTarget = NULL;
+
+	while (!FNullEnt(pentTarget))
+	{
+		if (FBitSet(VARS(pentTarget)->flags, FL_MONSTER))
+		{
+			pTarget = GetMonsterPointer(pentTarget);
+			if (pTarget)
+			{
+				int gib = DMG_NEVERGIB;
+				if (FBitSet(pev->spawnflags, 16))
+					gib = DMG_ALWAYSGIB;
+				pTarget->pev->health = 0;
+				pTarget->pev->takedamage = DAMAGE_YES;
+				pTarget->TakeDamage(pev, pev, pTarget->pev->max_health * 2, gib);
+			}
+		}
+		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(pev->target));
+		pTarget = NULL;
+	}
+
+}
+
+#define SF_TRIGGERLOOK_FIREONCE 1
+
+class CTriggerLook : public CBaseDelay
+{
+public:
+	bool KeyValue(KeyValueData *pkvd) override;
+	void Spawn() override;
+	int ObjectCaps() override { return CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	void Touch(CBaseEntity* pOther) override;
+
+	EHANDLE m_hLookTarget;
+	float m_flFieldOfView;
+	float m_flLookTime;
+	float m_flLookTimeTotal;
+	float m_flLookTimeLast;
+	float m_flTouchTimeLast;
+	string_t m_sMaster;
+
+	bool Save(CSave &save) override;
+	bool Restore(CRestore &restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
+};
+
+LINK_ENTITY_TO_CLASS(trigger_look, CTriggerLook)
+
+TYPEDESCRIPTION	CTriggerLook::m_SaveData[] =
+{
+	DEFINE_FIELD(CTriggerLook, m_hLookTarget, FIELD_EHANDLE),
+	DEFINE_FIELD(CTriggerLook, m_flFieldOfView, FIELD_FLOAT),
+	DEFINE_FIELD(CTriggerLook, m_flLookTime, FIELD_FLOAT),
+	DEFINE_FIELD(CTriggerLook, m_flLookTimeTotal, FIELD_FLOAT),
+	DEFINE_FIELD(CTriggerLook, m_flLookTimeLast, FIELD_TIME),
+	DEFINE_FIELD(CTriggerLook, m_flTouchTimeLast, FIELD_TIME),
+	DEFINE_FIELD(CTriggerLook, m_sMaster, FIELD_STRING),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerLook, CBaseDelay)
+
+bool CTriggerLook::KeyValue(KeyValueData *pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "field_of_view"))
+	{
+		m_flFieldOfView = atof(pkvd->szValue);
+		return true;
+	}
+	else if (FStrEq(pkvd->szKeyName, "look_time"))
+	{
+		m_flLookTime = atof(pkvd->szValue);
+		return true;
+	}
+	else if (FStrEq(pkvd->szKeyName, "master"))
+	{
+		m_sMaster = ALLOC_STRING(pkvd->szValue);
+		return true;
+	}
+	else
+		return CBaseDelay::KeyValue(pkvd);
+}
+
+void CTriggerLook::Spawn()
+{
+	pev->solid = SOLID_TRIGGER;
+	pev->movetype = MOVETYPE_NONE;
+	SET_MODEL(ENT(pev), STRING(pev->model));
+
+	m_flLookTimeTotal = -1.0f;
+}
+
+void CTriggerLook::Touch(CBaseEntity *pOther)
+{
+	if (!pOther->IsPlayer() || FStringNull(pev->netname))
+	{
+		return;
+	}
+	if (!FStringNull(m_sMaster) && !UTIL_IsMasterTriggered(m_sMaster, pOther))
+	{
+		return;
+	}
+
+	if (m_hLookTarget == 0)
+	{
+		m_hLookTarget = UTIL_FindEntityByTargetname(0, STRING(pev->netname));
+		if (m_hLookTarget == 0)
+		{
+			return;
+		}
+	}
+
+	if (gpGlobals->time - m_flTouchTimeLast >= 0.2f)
+	{
+		// haven't been touched for a while
+		m_flLookTimeTotal = -1.0f;
+	}
+
+	m_flTouchTimeLast = gpGlobals->time;
+
+	UTIL_MakeVectors(pOther->pev->v_angle);
+	const Vector vLookDir = gpGlobals->v_forward;
+	const Vector vTargetDir = (m_hLookTarget->pev->origin - pOther->EyePosition()).Normalize();
+
+	const float fDotPr = DotProduct(vLookDir, vTargetDir);
+	if (fDotPr > m_flFieldOfView)
+	{
+		if (m_flLookTimeTotal == -1.0f)
+		{
+			m_flLookTimeLast = gpGlobals->time;
+			m_flLookTimeTotal = 0;
+		}
+		else
+		{
+			m_flLookTimeTotal += gpGlobals->time - m_flLookTimeLast;
+			m_flLookTimeLast = gpGlobals->time;
+		}
+
+		if (m_flLookTimeTotal >= m_flLookTime)
+		{
+			SUB_UseTargets(pOther, USE_TOGGLE, 0);
+			m_flLookTimeTotal = -1.0f;
+			if (FBitSet(pev->spawnflags, SF_TRIGGERLOOK_FIREONCE))
+			{
+				SetThink(&CBaseEntity::SUB_Remove);
+				pev->nextthink = gpGlobals->time;
+			}
+		}
+	}
+	else
+	{
+		m_flLookTimeTotal = -1.0f;
+	}
 }

@@ -4,3 +4,8 @@
 !utils/procinfo/lib/win32_vc6/procinfo.lib
 !utils/vgui/lib/win32_vc6/vgui.lib
 .*
+Release*
+.clang-tidy
+.clang-format
+Release/*
+Debug/*

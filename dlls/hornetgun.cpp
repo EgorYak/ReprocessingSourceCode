@@ -63,6 +63,7 @@ void CHgun::Precache()
 	PRECACHE_MODEL("models/v_m60.mdl");
 	PRECACHE_MODEL("models/w_m60.mdl");
 	PRECACHE_MODEL("models/p_m60.mdl");
+	PRECACHE_MODEL("models/v_nam_m60.mdl");
 
 	PRECACHE_SOUND("hassault/hw_shoot1.wav");
 	PRECACHE_SOUND("hassault/hw_shoot2.wav");
@@ -116,7 +117,10 @@ bool CHgun::Deploy()
 		pev->body = m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType];
 	else
 		pev->body = 18;
-	return DefaultDeploy("models/v_m60.mdl", "models/p_m60.mdl", HGUN_UP, "hive", pev->body);
+	if (!m_iFirePhase)
+		return DefaultDeploy("models/v_m60.mdl", "models/p_m60.mdl", HGUN_UP, "hive", pev->body);
+	else
+		return DefaultDeploy("models/v_nam_m60.mdl", "models/p_m60.mdl", HGUN_UP, "hive", pev->body);
 }
 
 void CHgun::Holster()
@@ -128,8 +132,6 @@ void CHgun::Holster()
 
 void CHgun::PrimaryAttack()
 {
-	if (m_iFirePhase)
-		Reload();
 	// don't fire underwater
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
@@ -160,7 +162,8 @@ void CHgun::PrimaryAttack()
 	m_flRechargeTime = gpGlobals->time + 0.12;
 #endif
 
-	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
+	if (!m_iFirePhase)
+		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
 
 	int flags;
 #if defined(CLIENT_WEAPONS)
@@ -179,6 +182,9 @@ void CHgun::PrimaryAttack()
 	// player "shoot" animation
 	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
 
+	if (m_iFirePhase)
+		recoil = false;
+
 	if (recoil)
 	{
 		if (!FBitSet(m_pPlayer->pev->flags, FL_ONGROUND))
@@ -191,7 +197,10 @@ void CHgun::PrimaryAttack()
 			KickBack(0.5, 0.35, 0.3, 0.03, 3.75, 3.0, 9);
 	}
 
-	m_flNextPrimaryAttack = GetNextAttackDelay(0.12);
+	if (!m_iFirePhase)
+		m_flNextPrimaryAttack = GetNextAttackDelay(0.12);
+	else
+		m_flNextPrimaryAttack = GetNextAttackDelay(0.08);
 
 	if (m_flNextPrimaryAttack < UTIL_WeaponTimeBase())
 	{

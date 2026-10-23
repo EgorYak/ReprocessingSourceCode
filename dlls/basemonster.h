@@ -225,6 +225,7 @@ public:
 	void SetState(MONSTERSTATE State);
 	virtual void ReportAIState();
 
+	void CheckAttacks(CBaseEntity* pTarget, float flDist, float flMeleeDist);
 	void CheckAttacks(CBaseEntity* pTarget, float flDist);
 	virtual bool CheckEnemy(CBaseEntity* pEnemy);
 	void PushEnemy(CBaseEntity* pEnemy, Vector& vecLastKnownPos);

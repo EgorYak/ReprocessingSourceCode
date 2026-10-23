@@ -793,3 +793,73 @@ bool CSmlSquid::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 {
 	return CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
+
+/// hellsquid
+
+class CHellSquid : public CSmlSquid
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+
+	void Touch(CBaseEntity* pOther) override
+	{
+		if (pOther->IsPlayer())
+		{
+			pOther->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_GENERIC);
+			// If the client is pushing me, give me some base velocity
+			if (gpGlobals->trace_ent && gpGlobals->trace_ent == edict())
+			{
+				pev->basevelocity = pOther->pev->velocity;
+				pev->flags |= FL_BASEVELOCITY;
+			}
+		}
+	}
+
+	void SetObjectCollisionBox() override
+	{
+		pev->absmin = pev->origin + Vector(-32, -32, 0);
+		pev->absmax = pev->origin + Vector(32, 32, 2);
+	}
+};
+
+LINK_ENTITY_TO_CLASS(monster_hellsquid, CHellSquid);
+
+void CHellSquid::Spawn()
+{
+	Precache();
+	SET_MODEL(ENT(pev), "models/hellsquid.mdl");
+	// Just for fun
+	//	SET_MODEL(ENT(pev), "models/icky.mdl");
+
+	//	UTIL_SetSize( pev, g_vecZero, g_vecZero );
+	//UTIL_SetSize(pev, Vector(-1, -1, 0), Vector(1, 1, 2));
+	UTIL_SetModelSize(pev);
+	// Don't push the minz down too much or the water check will fail because this entity is really point-sized
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_FLY;
+	m_bloodColor = BLOOD_COLOR_GREEN;
+	SetBits(pev->flags, FL_SWIM);
+	pev->health = gSkillData.leechHealth;
+
+	m_flFieldOfView = -0.5; // 180 degree FOV
+	m_flDistLook = 750;
+	MonsterInit();
+	SetThink(&CLeech::SwimThink);
+	SetUse(NULL);
+	SetTouch(NULL);
+	pev->view_ofs = g_vecZero;
+
+
+	SetActivity(ACT_SWIM);
+	SetState(MONSTERSTATE_IDLE);
+}
+
+void CHellSquid::Precache()
+{
+	//PRECACHE_MODEL("models/icky.mdl");
+	PRECACHE_MODEL("models/hellsquid.mdl");
+
+	PRECACHE_SOUND_ARRAY(pAttackSounds);
+	PRECACHE_SOUND_ARRAY(pAlertSounds);
+};

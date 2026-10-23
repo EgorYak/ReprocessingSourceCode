@@ -179,6 +179,7 @@ public:
 	int m_iFOV;		  // field of view
 	int m_iClientFOV; // client's known FOV
 	int m_iTrack; // mp3 playmemory
+	int m_iSpeed; // for saverestore player_changespeed
 	bool m_bRestoreTrack;
 	// usable player items
 	CBasePlayerItem* m_rgpPlayerItems[MAX_ITEM_TYPES];
@@ -206,6 +207,9 @@ public:
 	float m_flNextDecalTime;  // next time this player can spray a decal
 
 	char m_szTeamName[TEAM_NAME_LENGTH];
+
+	//For DLC
+	bool m_bIsDLC;
 
 	void Spawn() override;
 	void Pain();

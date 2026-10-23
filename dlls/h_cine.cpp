@@ -238,3 +238,81 @@ void CCineBlood::Spawn()
 	SetUse(&CCineBlood::BloodStart);
 	pev->health = 20; //hacked health to count iterations
 }
+
+class CSceneMonster : public CBaseMonster
+{
+public:
+	void Spawn() override;
+	bool KeyValue(KeyValueData* pkvd) override;
+	void EXPORT CineThink();
+
+	int m_iPose; // which sequence to display	-- temporary, don't need to save
+};
+
+bool CSceneMonster::KeyValue(KeyValueData* pkvd)
+{
+	if (FStrEq(pkvd->szKeyName, "pose"))
+	{
+		m_iPose = atoi(pkvd->szValue);
+		return true;
+	}
+
+	return CBaseMonster::KeyValue(pkvd);
+}
+
+LINK_ENTITY_TO_CLASS(monster_scene, CSceneMonster);
+
+//=========================================================
+// ********** SceneMonster SPAWN **********
+//=========================================================
+void CSceneMonster::Spawn()
+{
+	if (pev->model)
+	{
+		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC
+		SET_MODEL(ENT(pev), (char*)STRING(pev->model));
+	}
+	else
+	{
+		PRECACHE_MODEL("models/barney.mdl");
+		SET_MODEL(ENT(pev), "models/barney.mdl");
+	}
+
+	pev->effects = 0;
+	pev->yaw_speed = 8;
+	pev->sequence = 0;
+
+	MonsterInitDead();
+
+	pev->sequence = m_iPose;
+	if (pev->sequence == -1)
+	{
+		ALERT(at_console, "Monster with bad pose\n");
+	}
+
+	pev->solid = SOLID_NOT;
+	pev->takedamage = DAMAGE_NO;
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
+
+	SetThink(&CSceneMonster::CineThink);
+	pev->nextthink += 1.0;
+
+	if (FBitSet(pev->spawnflags, 16))
+		pev->movetype = MOVETYPE_NOCLIP;
+}
+
+void CSceneMonster::CineThink()
+{
+	// DBG_CheckMonsterData(pev);
+
+	// Emit particles from origin (double check animator's placement of model)
+	// THIS is a test feature
+	//UTIL_ParticleEffect(pev->origin, g_vecZero, 255, 20);
+
+	if (0 == pev->animtime)
+		ResetSequenceInfo();
+
+	pev->nextthink = gpGlobals->time + 1.0;
+
+	StudioFrameAdvance();
+}

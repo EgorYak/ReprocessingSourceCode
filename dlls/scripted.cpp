@@ -316,6 +316,10 @@ void CCineMonster::PossessEntity()
 
 	if (pTarget)
 	{
+		if (pTarget->m_pCine)
+		{
+			pTarget->m_pCine->CancelScript();
+		}
 
 		// FindEntity() just checked this!
 #if 0
@@ -1291,6 +1295,7 @@ public:
 	float m_flWait;
 	float m_flReturnTime;
 	Vector m_vecIdeal;
+	int m_sTeleDest;
 };
 LINK_ENTITY_TO_CLASS(model_camera, CModelCamera);
 
@@ -1302,6 +1307,7 @@ TYPEDESCRIPTION CModelCamera::m_SaveData[] =
 	DEFINE_FIELD(CModelCamera, m_flWait, FIELD_FLOAT),
 	DEFINE_FIELD(CModelCamera, m_flReturnTime, FIELD_TIME),
 	DEFINE_FIELD(CModelCamera, m_vecIdeal, FIELD_VECTOR),
+	DEFINE_FIELD(CModelCamera, m_sTeleDest, FIELD_STRING),
 };
 
 IMPLEMENT_SAVERESTORE(CModelCamera, CBaseDelay);
@@ -1320,6 +1326,11 @@ bool CModelCamera::KeyValue(KeyValueData* pkvd)
 	if (FStrEq(pkvd->szKeyName, "wait"))
 	{
 		m_flWait = atof(pkvd->szValue);
+		return true;
+	}
+	if (FStrEq(pkvd->szKeyName, "init_tele"))
+	{
+		m_sTeleDest = ALLOC_STRING(pkvd->szValue);
 		return true;
 	}
 
@@ -1360,6 +1371,50 @@ void CModelCamera::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE u
 	{
 		ALERT(at_console, "Target not found\n");
 		return;
+	}
+
+	if (FBitSet(pev->spawnflags, 16))
+	{
+		if (FBitSet(player->pev->flags, FL_DUCKING))
+		{
+			ALERT(at_console, "player duck\n");
+			UTIL_SetOrigin(m_hTarget->pev, player->pev->origin - Vector(0, 0, 17));
+		}
+		else
+		{
+			ALERT(at_console, "player standing\n");
+			UTIL_SetOrigin(m_hTarget->pev, player->pev->origin - Vector(0, 0, 35));
+		}
+		m_hTarget->pev->angles = player->pev->angles;
+	}
+	if (!FBitSet(pev->spawnflags, 4))
+	{
+		player->pev->effects |= EF_NODRAW;
+	}
+	if (player->FlashlightIsOn())
+		player->FlashlightTurnOff();
+
+	if (m_sTeleDest)
+	{
+		m_hTarget->pev->movetype = MOVETYPE_NOCLIP;
+		edict_t* pentTarget = NULL;
+		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(m_sTeleDest));
+		if (FNullEnt(pentTarget))
+			return;
+		Vector tmp = VARS(pentTarget)->origin;
+		if (!FBitSet(pev->spawnflags, 32))
+		{
+			tmp.z -= player->pev->mins.z; // make origin adjustments in case the teleportee is a player. (origin in center, not at feet)
+			tmp.z++;
+			player->pev->flags &= ~FL_ONGROUND;
+			UTIL_SetOrigin(player->pev, tmp);
+			player->pev->angles = pentTarget->v.angles;
+			player->pev->v_angle = pentTarget->v.angles;
+
+			player->pev->fixangle = 1;
+			player->pev->velocity = player->pev->basevelocity = g_vecZero;
+		}
+		m_hTarget->pev->vuser1 = tmp;
 	}
 
 	player->EnableControl(false);
@@ -1406,8 +1461,25 @@ void CModelCamera::FollowTarget()
 		SUB_UseTargets(this, USE_OFF, 0);
 		pev->avelocity = Vector(0, 0, 0);
 		m_hTarget->pev->iuser1 = 0;
-		m_hPlayer->pev->origin = m_hTarget->Center();
-		m_hPlayer->pev->angles = m_hTarget->pev->angles;// + m_hTarget->pev->view_ofs;
+
+		if (!m_sTeleDest)
+		{
+			m_hPlayer->pev->flags &= ~FL_ONGROUND;
+			UTIL_SetOrigin(m_hPlayer->pev, m_hTarget->Center());
+			m_hPlayer->pev->angles = m_hTarget->pev->angles;
+			m_hPlayer->pev->v_angle = m_hTarget->pev->view_ofs;
+
+			//m_hPlayer->pev->fixangle = 1;
+			m_hPlayer->pev->velocity = player->pev->basevelocity = g_vecZero;
+			/*
+			UTIL_SetOrigin(m_hPlayer->pev, m_hTarget->Center());
+			m_hPlayer->pev->angles = m_hTarget->pev->angles;// + m_hTarget->pev->view_ofs;
+			*/
+		}
+		if (!FBitSet(pev->spawnflags, SF_MONSTER_HITMONSTERCLIP))
+		{
+			player->pev->effects &= EF_NODRAW;
+		}
 		return;
 	}
 

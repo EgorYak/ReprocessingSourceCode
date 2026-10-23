@@ -1214,7 +1214,10 @@ void SetupVisibility(edict_t* pViewEntity, edict_t* pClient, unsigned char** pvs
 		return;
 	}
 
-	org = pView->v.origin + pView->v.view_ofs;
+	if (pView->v.iuser1 == 14 && pView->v.vuser1 != g_vecZero)
+		org = pView->v.vuser1;
+	else
+		org = pView->v.origin + pView->v.view_ofs;
 	if ((pView->v.flags & FL_DUCKING) != 0)
 	{
 		org = org + (VEC_HULL_MIN - VEC_DUCK_HULL_MIN);

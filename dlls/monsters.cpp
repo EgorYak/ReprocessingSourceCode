@@ -1178,6 +1178,51 @@ bool CBaseMonster::CheckMeleeAttack2(float flDot, float flDist)
 // CheckAttacks - sets all of the bits for attacks that the
 // monster is capable of carrying out on the passed entity.
 //=========================================================
+void CBaseMonster::CheckAttacks(CBaseEntity *pTarget, float flDist, float flMeleeDist)
+{
+	Vector2D vec2LOS;
+	float flDot;
+
+	UTIL_MakeVectors(pev->angles);
+
+	vec2LOS = (pTarget->pev->origin - pev->origin).Make2D();
+	vec2LOS.Normalize();
+
+	flDot = DotProduct(vec2LOS, gpGlobals->v_forward.Make2D());
+
+	// we know the enemy is in front now. We'll find which attacks the monster is capable of by
+	// checking for corresponding Activities in the model file, then do the simple checks to validate
+	// those attack types.
+
+	// Clear all attack conditions
+	ClearConditions(bits_COND_CAN_RANGE_ATTACK1 | bits_COND_CAN_RANGE_ATTACK2 | bits_COND_CAN_MELEE_ATTACK1 | bits_COND_CAN_MELEE_ATTACK2);
+
+	if (m_afCapability & bits_CAP_RANGE_ATTACK1)
+	{
+		if (CheckRangeAttack1(flDot, flDist))
+			SetConditions(bits_COND_CAN_RANGE_ATTACK1);
+	}
+	if (m_afCapability & bits_CAP_RANGE_ATTACK2)
+	{
+		if (CheckRangeAttack2(flDot, flDist))
+			SetConditions(bits_COND_CAN_RANGE_ATTACK2);
+	}
+	if (m_afCapability & bits_CAP_MELEE_ATTACK1)
+	{
+		if (CheckMeleeAttack1(flDot, flMeleeDist))
+			SetConditions(bits_COND_CAN_MELEE_ATTACK1);
+	}
+	if (m_afCapability & bits_CAP_MELEE_ATTACK2)
+	{
+		if (CheckMeleeAttack2(flDot, flMeleeDist))
+			SetConditions(bits_COND_CAN_MELEE_ATTACK2);
+	}
+}
+
+//=========================================================
+// CheckAttacks - sets all of the bits for attacks that the
+// monster is capable of carrying out on the passed entity.
+//=========================================================
 void CBaseMonster::CheckAttacks(CBaseEntity* pTarget, float flDist)
 {
 	Vector2D vec2LOS;
@@ -1261,22 +1306,84 @@ bool CBaseMonster::CheckEnemy(CBaseEntity* pEnemy)
 		return false;
 	}
 
-	Vector vecEnemyPos = pEnemy->pev->origin;
-	// distance to enemy's origin
-	flDistToEnemy = (vecEnemyPos - pev->origin).Length();
-	vecEnemyPos.z += pEnemy->pev->size.z * 0.5;
-	// distance to enemy's head
-	float flDistToEnemy2 = (vecEnemyPos - pev->origin).Length();
-	if (flDistToEnemy2 < flDistToEnemy)
-		flDistToEnemy = flDistToEnemy2;
+	// old code
+	//Vector vecEnemyPos = pEnemy->pev->origin;
+	//// distance to enemy's origin
+	//flDistToEnemy = (vecEnemyPos - pev->origin).Length();
+	//vecEnemyPos.z += pEnemy->pev->size.z * 0.5;
+	//// distance to enemy's head
+	//float flDistToEnemy2 = (vecEnemyPos - pev->origin).Length();
+	//if (flDistToEnemy2 < flDistToEnemy)
+	//	flDistToEnemy = flDistToEnemy2;
+	//else
+	//{
+	//	// distance to enemy's feet
+	//	vecEnemyPos.z -= pEnemy->pev->size.z;
+	//	float flDistToEnemy2 = (vecEnemyPos - pev->origin).Length();
+	//	if (flDistToEnemy2 < flDistToEnemy)
+	//		flDistToEnemy = flDistToEnemy2;
+	//}
+
+	// start of Freeslave code for monster check attack
+	// My enemy is not actually my enemy anymore or I became prisoner (e.g. via trigger_configure_monster)
+	bool shouldLoseEnemy = IRelationship(pEnemy) < R_DL || FBitSet(pev->spawnflags, SF_MONSTER_PRISONER);
+	if (!shouldLoseEnemy)
+	{
+		CBaseMonster* pMonster = pEnemy->MyMonsterPointer();
+		// Check if my enemy became prisoner
+		if (pMonster)
+		{
+			if (FBitSet(pMonster->pev->spawnflags, SF_MONSTER_PRISONER))
+			{
+				shouldLoseEnemy = true;
+			}
+		}
+	}
+
+	// Doesn't care about this enemy anymore. Pretend to lose the enemy.
+	if (shouldLoseEnemy)
+	{
+		SetConditions(bits_COND_ENEMY_LOST);
+		ClearConditions(bits_COND_SEE_ENEMY | bits_COND_ENEMY_OCCLUDED);
+		return false;
+	}
+
+	const float myFeetLevel = pev->origin.z + pev->mins.z;
+	const float myHeight = pev->maxs.z - pev->mins.z;
+	const float enemyFeetLevel = pEnemy->pev->origin.z + pEnemy->pev->mins.z;
+	const float enemyHeight = pEnemy->pev->maxs.z - pEnemy->pev->mins.z;
+
+	flDistToEnemy = 1000000.0f;
+
+	Vector myPos = pev->origin;
+	myPos.z = myFeetLevel;
+	myPos.z += myHeight * 0.5f;
+
+	for (int j = 0; j < 4; ++j)
+	{
+		Vector enemyPos = pEnemy->pev->origin;
+		enemyPos.z = enemyFeetLevel;
+		enemyPos.z += enemyHeight * 0.25f * j;
+
+		const float flDistToEnemy2 = (enemyPos - myPos).Length();
+		flDistToEnemy = V_min(flDistToEnemy, flDistToEnemy2);
+	}
+
+	float maxSideSize;
+	float minSideSize;
+
+	if (pEnemy->pev->size.x >= pev->size.x)
+	{
+		maxSideSize = pEnemy->pev->size.x;
+		minSideSize = pev->size.x;
+	}
 	else
 	{
-		// distance to enemy's feet
-		vecEnemyPos.z -= pEnemy->pev->size.z;
-		float flDistToEnemy2 = (vecEnemyPos - pev->origin).Length();
-		if (flDistToEnemy2 < flDistToEnemy)
-			flDistToEnemy = flDistToEnemy2;
+		maxSideSize = pev->size.x;
+		minSideSize = pEnemy->pev->size.x;
 	}
+	const float flMeleeDist = flDistToEnemy - maxSideSize / 2 + minSideSize / 2;
+	// end of Freeslave code
 
 	if (HasConditions(bits_COND_SEE_ENEMY))
 	{
@@ -1326,7 +1433,8 @@ bool CBaseMonster::CheckEnemy(CBaseEntity* pEnemy)
 
 	if (FCanCheckAttacks())
 	{
-		CheckAttacks(m_hEnemy, flDistToEnemy);
+		//CheckAttacks(m_hEnemy, flDistToEnemy);
+		CheckAttacks(m_hEnemy, flDistToEnemy, flMeleeDist);
 	}
 
 	// Freeslave code for move to nearest
@@ -2378,6 +2486,8 @@ void CBaseMonster::MoveExecute(CBaseEntity* pTargetEnt, const Vector& vecDir, fl
 		m_IdealActivity = m_movementActivity;
 #endif
 
+	const Vector originBeforeMove = pev->origin;
+
 	float flTotal = m_flGroundSpeed * pev->framerate * flInterval;
 	float flStep;
 	while (flTotal > 0.001)
@@ -2387,6 +2497,20 @@ void CBaseMonster::MoveExecute(CBaseEntity* pTargetEnt, const Vector& vecDir, fl
 		UTIL_MoveToOrigin(ENT(pev), m_Route[m_iRouteIndex].vecLocation, flStep, MOVE_NORMAL);
 		flTotal -= flStep;
 	}
+
+	// Sometimes monster thinks he can move, but he won't
+	if (m_flGroundSpeed > 0.0f && flInterval > 0.0f && pev->origin == originBeforeMove)
+	{
+		ALERT(at_aiconsole, "%s: didn't move after move execute\n", STRING(pev->classname));
+		Vector velocity = m_Route[m_iRouteIndex].vecLocation - pev->origin;
+		velocity.z = 0.0f;
+		velocity.Normalize();
+		velocity *= m_flGroundSpeed;
+		pev->velocity += velocity;
+
+		//TaskFail("didn't move after move execute");
+	}
+
 	// ALERT( at_console, "dist %f\n", m_flGroundSpeed * pev->framerate * flInterval );
 }
 
@@ -2703,7 +2827,16 @@ bool CBaseMonster::FindCover(Vector vecThreat, Vector vecViewOffset, float flMin
 			if (tr.flFraction != 1.0)
 			{
 				// ..and is also closer to me than the threat, or the same distance from myself and the threat the node is good.
-				if ((iMyNode == iThreatNode) || WorldGraph.PathLength(iMyNode, nodeNumber, iMyHullIndex, m_afCapability) <= WorldGraph.PathLength(iThreatNode, nodeNumber, iMyHullIndex, m_afCapability))
+				//if ((iMyNode == iThreatNode) || WorldGraph.PathLength(iMyNode, nodeNumber, iMyHullIndex, m_afCapability) <= WorldGraph.PathLength(iThreatNode, nodeNumber, iMyHullIndex, m_afCapability))
+				// Freeslave
+				bool distanceOk = iMyNode == iThreatNode;
+				if (!distanceOk)
+				{
+					float myPathLength = WorldGraph.PathLength(iMyNode, nodeNumber, iMyHullIndex, m_afCapability);
+					float threatPathLength = WorldGraph.PathLength(iThreatNode, nodeNumber, iMyHullIndex, m_afCapability);
+					distanceOk = myPathLength <= threatPathLength || threatPathLength < 0;
+				}
+				if (distanceOk)
 				{
 					if (FValidateCover(node.m_vecOrigin) && MoveToLocation(ACT_RUN, 0, node.m_vecOrigin))
 					{
