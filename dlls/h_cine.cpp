@@ -294,6 +294,7 @@ void CSceneMonster::Spawn()
 	pev->takedamage = DAMAGE_NO;
 	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 
+	pev->animtime = 0;
 	SetThink(&CSceneMonster::CineThink);
 	pev->nextthink += 1.0;
 
@@ -315,4 +316,15 @@ void CSceneMonster::CineThink()
 	pev->nextthink = gpGlobals->time + 1.0;
 
 	StudioFrameAdvance();
+
+	if (m_fSequenceFinished && !m_fSequenceLoops)
+	{
+		// ResetSequenceInfo();
+		// hack to avoid reloading model every frame
+		pev->animtime = gpGlobals->time;
+		pev->framerate = 1.0;
+		m_fSequenceFinished = false;
+		m_flLastEventCheck = gpGlobals->time;
+		pev->frame = 0;
+	}
 }

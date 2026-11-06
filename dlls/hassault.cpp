@@ -136,7 +136,7 @@ IMPLEMENT_SAVERESTORE( CHassault, CSquadMonster );
 const char* CHassault::pAssaultSentences[] =
 {
 	"HG_GREN",	  // grenade scared Assault
-	"HG_ALERT",	  // sees player
+	"HS_ALERT",	  // sees player
 	"HG_MONSTER", // sees monster
 	"HG_COVER",	  // running to cover
 	"HG_THROW",	  // about to throw grenade

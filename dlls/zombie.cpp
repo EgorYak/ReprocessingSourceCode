@@ -26,6 +26,12 @@
 #include "weapons.h"
 #include "explode.h"
 #include "decals.h"
+#include "animation.h"
+
+#define SF_BURNING				8
+
+#define FIRE_SPRITE_NAME		"sprites/xffloor.spr"
+#define BURNIND_SOUND_NAME		"ambience/burning1.wav"
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -63,6 +69,18 @@ public:
 	static const char* pAttackHitSounds[];
 	static const char* pAttackMissSounds[];
 
+	void PrescheduleThink(void);
+	void FireUpdate(void);
+	void Killed(entvars_t *pevAttacker, int iGib);
+	//void SetActivity(Activity NewActivity);
+
+	CSprite		*m_pFire;		// fire
+	int		m_iFireBrightness;
+
+	virtual bool		Save(CSave &save);
+	virtual bool		Restore(CRestore &restore);
+	static	TYPEDESCRIPTION m_SaveData[];
+
 	// No range attacks
 	bool CheckRangeAttack1(float flDot, float flDist) override { return false; }
 	bool CheckRangeAttack2(float flDot, float flDist) override { return false; }
@@ -79,6 +97,14 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS(monster_zombie, CZombie);
+
+TYPEDESCRIPTION	CZombie::m_SaveData[] =
+{
+	DEFINE_FIELD(CZombie, m_pFire, FIELD_CLASSPTR),
+	DEFINE_FIELD(CZombie, m_iFireBrightness, FIELD_INTEGER),
+};
+
+IMPLEMENT_SAVERESTORE(CZombie, CBaseMonster);
 
 const char* CZombie::pAttackHitSounds[] =
 	{
@@ -119,6 +145,115 @@ const char* CZombie::pPainSounds[] =
 		"zombie/zo_pain1.wav",
 		"zombie/zo_pain2.wav",
 };
+
+//=========================================================
+// Preschedule Think
+//=========================================================
+void CZombie::PrescheduleThink(void)
+{
+	if (pev->spawnflags & SF_BURNING)
+	{
+		m_iFireBrightness = RANDOM_LONG(150, 250);
+		FireUpdate();
+	}
+}
+
+//=========================================================
+// Update a fire
+//=========================================================
+void CZombie::FireUpdate(void)
+{
+	if (m_pFire)
+	{
+		m_pFire->Animate(1);
+		UTIL_SetOrigin(m_pFire->pev, pev->origin + pev->view_ofs);
+		m_pFire->pev->renderamt = UTIL_Approach(m_iFireBrightness, m_pFire->pev->renderamt, 12);
+		if (m_pFire->pev->renderamt == 0)
+			m_pFire->pev->effects |= EF_NODRAW;
+		else
+		{
+			m_pFire->pev->effects &= ~EF_NODRAW;
+			Vector vecSrc = pev->origin;
+			MESSAGE_BEGIN(MSG_PVS, SVC_TEMPENTITY, vecSrc);
+			WRITE_BYTE(TE_DLIGHT);
+
+			WRITE_COORD(vecSrc.x); // Позиция...
+			WRITE_COORD(vecSrc.y);
+			WRITE_COORD(vecSrc.z);
+			WRITE_BYTE(14); // Радиус (300 унитов).
+
+			WRITE_BYTE(128); // Оттенок красного
+			WRITE_BYTE(128); // Оттенок зеленого
+			WRITE_BYTE(0); // Оттенок синего
+
+			WRITE_BYTE(2); // Продолжительность вспышки
+			WRITE_BYTE(4); // Кол-во кадров
+			MESSAGE_END();
+		}
+	}
+}
+
+void CZombie::Killed(entvars_t *pevAttacker, int iGib)
+{
+	if (m_pFire)
+	{
+		m_iFireBrightness = 0;
+		UTIL_Remove(m_pFire);
+		m_pFire = NULL;
+	}
+	CBaseMonster::Killed(pevAttacker, iGib);
+}
+
+//=========================================================
+// SetActivity 
+//=========================================================
+/*
+void CZombie::SetActivity(Activity NewActivity)
+{
+	int	iSequence = ACTIVITY_NOT_AVAILABLE;
+	void *pmodel = GET_MODEL_PTR(ENT(pev));
+
+	switch (NewActivity)
+	{
+	case ACT_WALK:
+		if (pev->spawnflags & SF_BURNING)
+		{
+			iSequence = LookupActivity(ACT_WALK_HURT);
+		}
+		break;
+	case ACT_IDLE:
+		if (pev->spawnflags & SF_BURNING)
+		{
+			iSequence = LookupActivity(ACT_IDLE_ANGRY);
+		}
+		break;
+	default:
+		iSequence = LookupActivity(NewActivity);
+		break;
+	}
+
+	m_Activity = NewActivity; // Go ahead and set this so it doesn't keep trying when the anim is not present
+
+	// Set to the desired anim, or default anim if the desired is not present
+	if (iSequence > ACTIVITY_NOT_AVAILABLE)
+	{
+		if (pev->sequence != iSequence || !m_fSequenceLoops)
+		{
+			pev->frame = 0;
+		}
+
+		pev->sequence = iSequence;	// Set to the reset anim (if it's there)
+		ResetSequenceInfo();
+		SetYawSpeed();
+	}
+	else
+	{
+		// Not available try to get default anim
+		ALERT(at_console, "%s has no sequence for act:%d\n", STRING(pev->classname), NewActivity);
+		pev->sequence = 0;	// Set to the reset anim (if it's there)
+	}
+}
+*/
 
 //=========================================================
 // Classify - indicates this monster's place in the
@@ -338,6 +473,15 @@ void CZombie::Spawn()
 	m_flFieldOfView = 0.5;	  // indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState = MONSTERSTATE_NONE;
 	m_afCapability = bits_CAP_DOORS_GROUP;
+
+	if (pev->spawnflags & SF_BURNING)
+	{
+		EMIT_SOUND(ENT(pev), CHAN_WEAPON, BURNIND_SOUND_NAME, 1, ATTN_NORM);
+		m_pFire = CSprite::SpriteCreate(FIRE_SPRITE_NAME, pev->origin, true);
+		m_pFire->SetTransparency(kRenderGlow, 255, 255, 255, 0, kRenderFxNoDissipation);
+		m_pFire->SetScale(1);
+		//m_pFire->SetAttachment(ENT(pev), 0);
+	}
 
 	MonsterInit();
 }

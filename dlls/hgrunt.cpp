@@ -675,6 +675,16 @@ void CHGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir,
 		{
 			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
 			m_bHeadshot = true;
 			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
 			CGib::SpawnHeadGib(pev);
@@ -704,11 +714,25 @@ bool CHGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float 
 	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
 	{
 		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
 		CGib::SpawnHeadGib(pev);
 		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+
+		m_bHeadshot = 1;
 	}
 
-	m_bHeadshot = 0;
+	m_iBuckshotInHead = 0;
+
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
@@ -1102,7 +1126,10 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case HGRUNT_AE_BURST2:
 	case HGRUNT_AE_BURST3:
-		Shoot();
+		if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
+			ShootM16();
+		else
+			Shoot();
 		break;
 
 	case HGRUNT_AE_KICK:
@@ -1270,6 +1297,9 @@ void CHGrunt::Precache()
 	PRECACHE_SOUND("hgrunt/gr_step2.wav");
 	PRECACHE_SOUND("hgrunt/gr_step3.wav");
 	PRECACHE_SOUND("hgrunt/gr_step4.wav");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
 }
 
 //=========================================================
@@ -1397,11 +1427,6 @@ void CHGrunt::PainSound()
 //=========================================================
 void CHGrunt::DeathSound()
 {
-	if (m_bHeadshot)
-	{
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "hit/nohead_death1.wav", 1, ATTN_IDLE);
-		return;
-	}
 	switch (RANDOM_LONG(0, 2))
 	{
 	case 0:
@@ -2795,6 +2820,8 @@ public:
 	int Classify() { return CLASS_ALIEN_MILITARY; };
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	void GibMonster() override;
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 };
 
 LINK_ENTITY_TO_CLASS(monster_nam_grunt, CNamGrunt);
@@ -2877,8 +2904,6 @@ void CNamGrunt::Precache()
 	else
 		PRECACHE_MODEL("models/hallucination1.mdl");
 
-	PRECACHE_SOUND("hgrunt/gr_mgun1.wav");
-	PRECACHE_SOUND("hgrunt/gr_mgun2.wav");
 	PRECACHE_SOUND("hgrunt/m161.wav");
 	PRECACHE_SOUND("hgrunt/m162.wav");
 
@@ -2921,6 +2946,97 @@ void CNamGrunt::Precache()
 }
 
 //=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CNamGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	// check for helmet shot
+	if (ptr->iHitgroup == 11)
+	{
+		// make sure we're wearing one
+		if (GetBodygroup(1) == HEAD_GRUNT && (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB)) != 0)
+		{
+			// absorb damage
+			flDamage -= 20;
+			if (flDamage <= 0)
+			{
+				UTIL_Ricochet(ptr->vecEndPos, 1.0);
+				flDamage = 0.01;
+			}
+		}
+		// it's head shot anyways
+		ptr->iHitgroup = HITGROUP_HEAD;
+	}
+	else if (ptr->iHitgroup == 12)
+	{
+		ExplosionCreate(ptr->vecEndPos, pev->angles, edict(), 100, true);
+		Killed(pevAttacker, GIB_ALWAYS);
+	}
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
+	CSquadMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
+//=========================================================
+// TakeDamage - overridden for the grunt because the grunt
+// needs to forget that he is in cover if he's hurt. (Obviously
+// not in a safe place anymore).
+//=========================================================
+bool CNamGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	Forget(bits_MEMORY_INCOVER);
+
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
+
+	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+}
+
+//=========================================================
 // PainSound
 //=========================================================
 void CNamGrunt::PainSound()
@@ -2946,11 +3062,6 @@ void CNamGrunt::PainSound()
 //=========================================================
 void CNamGrunt::DeathSound()
 {
-	if (m_bHeadshot)
-	{
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "hit/nohead_death1.wav", 1, ATTN_IDLE);
-		return;
-	}
 	switch (RANDOM_LONG(0, 2))
 	{
 	case 0:
@@ -3050,7 +3161,7 @@ void CNamGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case HGRUNT_AE_BURST2:
 	case HGRUNT_AE_BURST3:
-		Shoot();
+		ShootM16();
 		break;
 
 	default:
@@ -3063,6 +3174,383 @@ void CNamGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 // GibMonster - make gun fly through the air.
 //=========================================================
 void CNamGrunt::GibMonster()
+{
+	CBaseMonster::GibMonster();
+}
+
+class CVCGrunt : public CHGrunt
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	void DeathSound() override;
+	void PainSound() override;
+	void IdleSound() override;
+	int Classify() { return CLASS_ALIEN_MILITARY; };
+	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
+	void GibMonster() override;
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
+};
+
+LINK_ENTITY_TO_CLASS(monster_nam_vc, CVCGrunt);
+
+//=========================================================
+// Spawn
+//=========================================================
+void CVCGrunt::Spawn()
+{
+	Precache();
+	if (pev->model)
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/vc.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid = SOLID_SLIDEBOX;
+	pev->movetype = MOVETYPE_STEP;
+	m_bloodColor = BLOOD_COLOR_RED;
+	pev->effects = 0;
+	pev->health = gSkillData.hgruntHealth;
+	m_flFieldOfView = 0.2; // indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_MonsterState = MONSTERSTATE_NONE;
+	m_flNextGrenadeCheck = gpGlobals->time + 1;
+	m_flNextPainTime = gpGlobals->time;
+	m_iSentence = HGRUNT_SENT_NONE;
+
+	m_afCapability = bits_CAP_SQUAD | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
+
+	m_fEnemyEluded = false;
+	m_fFirstEncounter = true; // this is true when the grunt spawns, because he hasn't encountered an enemy yet.
+
+	m_HackedGunPos = Vector(0, 0, 55);
+
+	if (pev->weapons == 0)
+	{
+		// initialize to original values
+		pev->weapons = HGRUNT_9MMAR | HGRUNT_HANDGRENADE;
+		// pev->weapons = HGRUNT_SHOTGUN;
+		// pev->weapons = HGRUNT_9MMAR | HGRUNT_GRENADELAUNCHER;
+	}
+
+	if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
+	{
+		SetBodygroup(GUN_GROUP, GUN_SHOTGUN);
+		m_cClipSize = 8;
+	}
+	else if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
+	{
+		SetBodygroup(GUN_GROUP, GUN_M16);
+		m_cClipSize = GRUNT_CLIP_SIZE;
+	}
+	else if (FBitSet(pev->weapons, HGRUNT_RPG))
+	{
+		SetBodygroup(GUN_GROUP, GUN_RPG);
+		m_cClipSize = 1;
+	}
+	else
+	{
+		m_cClipSize = GRUNT_CLIP_SIZE;
+	}
+	m_cAmmoLoaded = m_cClipSize;
+
+	SetBodygroup(1, RANDOM_LONG(0, 1));
+
+	SetBodygroup(0, RANDOM_LONG(0, 1));
+
+	CTalkMonster::g_talkWaitTime = 0;
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CVCGrunt::Precache()
+{
+	if (pev->model)
+		PRECACHE_MODEL((char*)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/vc.mdl");
+	PRECACHE_SOUND("weapons/sks-1.wav");
+	PRECACHE_SOUND("weapons/sks-2.wav");
+
+	PRECACHE_SOUND("vc/alert1.wav");
+	PRECACHE_SOUND("vc/alert2.wav");
+	PRECACHE_SOUND("vc/die1.wav");
+
+	PRECACHE_SOUND("vc/die2.wav");
+	PRECACHE_SOUND("vc/die3.wav");
+	PRECACHE_SOUND("vc/idle1.wav");
+	PRECACHE_SOUND("vc/idle2.wav");
+	PRECACHE_SOUND("vc/idle3.wav");
+
+	PRECACHE_SOUND("hgrunt/gr_reload1.wav");
+
+	PRECACHE_SOUND("weapons/glauncher.wav");
+
+	PRECACHE_SOUND("weapons/rocketfire1.wav");
+
+	PRECACHE_SOUND("zombie/claw_miss2.wav"); // because we use the basemonster SWIPE animation event
+
+	// get voice pitch
+	if (RANDOM_LONG(0, 1))
+		m_voicePitch = 50 + RANDOM_LONG(0, 10);
+	else
+		m_voicePitch = 55;
+
+	PRECACHE_MODEL("models/rpgrocket.mdl");
+	PRECACHE_MODEL("sprites/smoke.spr");
+	PRECACHE_SOUND("weapons/rocket1.wav");
+
+	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
+	m_iRifleShell = PRECACHE_MODEL("models/556shell.mdl"); // brass shell
+	m_iShotgunShell = PRECACHE_MODEL("models/shotgunshell.mdl");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
+}
+
+//=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CVCGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	// check for helmet shot
+	if (ptr->iHitgroup == 11)
+	{
+		// make sure we're wearing one
+		if (GetBodygroup(1) == HEAD_GRUNT && (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB)) != 0)
+		{
+			// absorb damage
+			flDamage -= 20;
+			if (flDamage <= 0)
+			{
+				UTIL_Ricochet(ptr->vecEndPos, 1.0);
+				flDamage = 0.01;
+			}
+		}
+		// it's head shot anyways
+		ptr->iHitgroup = HITGROUP_HEAD;
+	}
+	else if (ptr->iHitgroup == 12)
+	{
+		ExplosionCreate(ptr->vecEndPos, pev->angles, edict(), 100, true);
+		Killed(pevAttacker, GIB_ALWAYS);
+	}
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
+	CSquadMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
+//=========================================================
+// TakeDamage - overridden for the grunt because the grunt
+// needs to forget that he is in cover if he's hurt. (Obviously
+// not in a safe place anymore).
+//=========================================================
+bool CVCGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	Forget(bits_MEMORY_INCOVER);
+
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
+
+	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+}
+
+//=========================================================
+// PainSound
+//=========================================================
+void CVCGrunt::PainSound()
+{
+	if (gpGlobals->time > m_flNextPainTime)
+	{
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert1.wav", 1, ATTN_NORM);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/alert2.wav", 1, ATTN_NORM);
+			break;
+		}
+
+		m_flNextPainTime = gpGlobals->time + 1;
+	}
+}
+
+//=========================================================
+// DeathSound
+//=========================================================
+void CVCGrunt::DeathSound()
+{
+	switch (RANDOM_LONG(0, 2))
+	{
+	case 0:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die1.wav", 1, ATTN_IDLE);
+		break;
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die2.wav", 1, ATTN_IDLE);
+		break;
+	case 2:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/die3.wav", 1, ATTN_IDLE);
+		break;
+	}
+}
+
+void CVCGrunt::IdleSound()
+{
+	if (FOkToSpeak() && (0 != g_fGruntQuestion || RANDOM_LONG(0, 1)))
+	{
+		switch (RANDOM_LONG(0, 2))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle1.wav", 1, ATTN_IDLE);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle2.wav", 1, ATTN_IDLE);
+			break;
+		case 2:
+			EMIT_SOUND(ENT(pev), CHAN_VOICE, "vc/idle3.wav", 1, ATTN_IDLE);
+			break;
+		}
+		JustSpoke();
+	}
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//=========================================================
+void CVCGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
+{
+	Vector vecShootDir;
+	Vector vecShootOrigin;
+
+	switch (pEvent->event)
+	{
+	case HGRUNT_AE_DROP_GUN:
+	{
+	}
+	break;
+
+	case HGRUNT_AE_BURST1:
+	{
+		if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
+		{
+			ShootM16();
+
+			// the first round of the three round burst plays the sound and puts a sound in the world sound list.
+			if (RANDOM_LONG(0, 1))
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+			}
+			else
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
+			}
+		}
+		else if (FBitSet(pev->weapons, HGRUNT_9MMAR))
+		{
+			ShootM16();
+
+			// the first round of the three round burst plays the sound and puts a sound in the world sound list.
+			if (RANDOM_LONG(0, 1))
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+			}
+			else
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
+			}
+		}
+		else if (FBitSet(pev->weapons, HGRUNT_RPG))
+		{
+			RPG();
+
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/rocketfire1.wav", 1, ATTN_NORM);
+		}
+		else
+		{
+			Shotgun();
+
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+		}
+
+		CSoundEnt::InsertSound(bits_SOUND_COMBAT, pev->origin, 384, 0.3);
+	}
+	break;
+
+	case HGRUNT_AE_BURST2:
+	case HGRUNT_AE_BURST3:
+		ShootM16();
+		if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER) || FBitSet(pev->weapons, HGRUNT_9MMAR))
+		{
+			if (RANDOM_LONG(0, 1))
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-1.wav", 1, ATTN_NORM);
+			}
+			else
+			{
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sks-2.wav", 1, ATTN_NORM);
+			}
+		}
+		break;
+
+	default:
+		CHGrunt::HandleAnimEvent(pEvent);
+		break;
+	}
+}
+
+//=========================================================
+// GibMonster - make gun fly through the air.
+//=========================================================
+void CVCGrunt::GibMonster()
 {
 	CBaseMonster::GibMonster();
 }

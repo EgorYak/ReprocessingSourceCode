@@ -225,6 +225,10 @@ void CMonsterMaker::MakeMonster()
 	CBaseMonster* createdmon = GetMonsterPointer(ENT(pevCreate));
 	createdmon->m_iTriggerCondition = m_iTriggerCondition;
 	createdmon->m_iszTriggerTarget = m_iszTriggerTarget;
+	if (pev->skin != 0)
+		createdmon->pev->skin = pev->skin;
+	if (pev->body != 0)
+		createdmon->pev->body = pev->body;
 
 	m_cLiveChildren++; // count this monster
 	m_cNumMonsters--;

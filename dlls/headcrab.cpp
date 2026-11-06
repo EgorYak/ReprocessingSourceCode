@@ -86,6 +86,7 @@ public:
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	bool CheckRangeAttack1(float flDot, float flDist) override;
 	bool CheckRangeAttack2(float flDot, float flDist) override;
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 
 	bool IsRusher() override { return true; }
@@ -94,6 +95,8 @@ public:
 	virtual int GetVoicePitch() { return 100; }
 	virtual float GetSoundVolue() { return 1.0; }
 	Schedule_t* GetScheduleOfType(int Type) override;
+
+	int m_iBuckshot;
 
 	CUSTOM_SCHEDULES;
 
@@ -421,11 +424,28 @@ bool CHeadCrab::CheckRangeAttack2(float flDot, float flDist)
 #endif
 }
 
+//=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CHeadCrab::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+		m_iBuckshot++;
+	CBaseMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
 bool CHeadCrab::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
 	// Don't take any acid damage -- BigMomma's mortar is acid
 	if ((bitsDamageType & DMG_ACID) != 0)
 		flDamage = 0;
+
+	if ((pev->health <= flDamage && m_iBuckshot >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		GibMonster();
+	}
+
+	m_iBuckshot = 0;
 
 	return CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
