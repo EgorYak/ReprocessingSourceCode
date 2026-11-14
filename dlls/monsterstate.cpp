@@ -83,9 +83,6 @@ void CBaseMonster::GatherConditions(void)
 			Look(m_flDistLook);
 			Listen(); // check for audible sounds.
 
-			// now filter conditions.
-			ClearConditions(IgnoreConditions());
-
 			GetEnemy();
 		}
 
@@ -97,6 +94,8 @@ void CBaseMonster::GatherConditions(void)
 
 		CheckAmmo();
 	}
+	// now filter conditions.
+	ClearConditions(IgnoreConditions());
 }
 // vasiavasiavasia95 end
 //=========================================================
