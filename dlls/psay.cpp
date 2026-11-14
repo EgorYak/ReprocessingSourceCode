@@ -21,6 +21,7 @@
 #include "cbase.h"
 
 #define SF_SAY_SUIT 0x0002
+#define SF_FORCE_SUBT 0x0004
 
 class CPlayerSay : public CBaseToggle
 {
@@ -185,7 +186,17 @@ void CMonSay::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useTyp
 		if (pMonster != NULL)
 		{
 			EMIT_SOUND(ENT(pMonster->pev), CHAN_VOICE, szSoundFile, VOL_NORM, ATTN_NORM);
-			UTIL_ShowMessagePVS(STRING(m_iszSentence), pMonster->pev->origin);
+			if ((pev->spawnflags & SF_FORCE_SUBT) == 0)
+				UTIL_ShowMessagePVS(STRING(m_iszSentence), pMonster->pev->origin);
+			else
+			{
+				CBaseEntity* pPlayer = NULL;
+				pPlayer = UTIL_GetLocalPlayer();
+				if (pPlayer && pPlayer->IsAlive())
+				{
+					UTIL_ShowMessagePVS(STRING(m_iszSentence), pPlayer->pev->origin);
+				}
+			}
 		}
 		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, STRING(m_iszEntity));
 	}

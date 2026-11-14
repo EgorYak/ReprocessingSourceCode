@@ -102,6 +102,11 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 		DEFINE_FIELD(CBaseMonster, m_vecMoveGoal, FIELD_POSITION_VECTOR),
 		DEFINE_FIELD(CBaseMonster, m_movementActivity, FIELD_INTEGER),
 
+		// vasiavasiavasia95
+		DEFINE_FIELD(CBaseMonster, m_bForceConditionsGather, FIELD_BOOLEAN),
+		DEFINE_FIELD(CBaseMonster,	m_bConditionsGathered, FIELD_BOOLEAN),
+		// vasiavasiavasia95
+
 		//		int					m_iAudibleList; // first index of a linked list of sounds that the monster can hear.
 		//	DEFINE_FIELD( CBaseMonster, m_afSoundTypes, FIELD_INTEGER ),
 		DEFINE_FIELD(CBaseMonster, m_vecLastPosition, FIELD_POSITION_VECTOR),
@@ -2569,6 +2574,8 @@ void CBaseMonster::MonsterInit()
 	SetThink(&CBaseMonster::MonsterInitThink);
 	pev->nextthink = gpGlobals->time + 0.1;
 	SetUse(&CBaseMonster::MonsterUse);
+
+	ForceGatherConditions();
 }
 
 //=========================================================

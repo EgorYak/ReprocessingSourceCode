@@ -1271,6 +1271,19 @@ int CGraph::LinkVisibleNodes(CLink* pLinkPool, FSFile& file, int* piBadNode)
 			if (0 != tr.fStartSolid)
 				continue;
 
+			// FreeSlave Try again with slightly higher positions: should improve connections on stairs
+			TraceResult tr2;
+			UTIL_TraceLine(m_pNodes[i].m_vecOrigin + Vector(0, 0, NODE_HEIGHT),
+				m_pNodes[j].m_vecOrigin + Vector(0, 0, NODE_HEIGHT),
+				ignore_monsters,
+				g_pBodyQueueHead,
+				&tr2);
+
+			if (tr2.flFraction == 1.0f)
+			{
+				tr = tr2;
+			}
+
 			if (tr.flFraction != 1.0)
 			{ // trace hit a brush ent, trace backwards to make sure that this ent is the only thing in the way.
 

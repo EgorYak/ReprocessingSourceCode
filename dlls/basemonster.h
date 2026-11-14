@@ -136,6 +136,9 @@ public:
 
 	CBaseMonster* MyMonsterPointer() override { return this; }
 	virtual void Look(int iDistance); // basic sight function for monsters
+	virtual void GatherConditions();  // vasiavasiavasia95
+	bool m_bConditionsGathered, m_bForceConditionsGather;  // vasiavasiavasia95
+	void ForceGatherConditions() { m_bForceConditionsGather = true; }	// Force a monster out of PVS to call GatherConditions on next think
 	virtual void RunAI();			  // core ai function!
 	void Listen();
 

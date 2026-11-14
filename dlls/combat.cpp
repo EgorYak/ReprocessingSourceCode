@@ -1101,6 +1101,7 @@ bool CBaseMonster::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, f
 			{
 				SetConditions(bits_COND_HEAVY_DAMAGE);
 			}
+			ForceGatherConditions(); // vasiavasiavasia95
 		}
 	}
 

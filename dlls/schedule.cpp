@@ -87,6 +87,7 @@ void CBaseMonster::ChangeSchedule(Schedule_t* pNewSchedule)
 	m_iTaskStatus = TASKSTATUS_NEW;
 	m_afConditions = 0; // clear all of the conditions
 	m_failSchedule = SCHED_NONE;
+	m_bConditionsGathered = false; // vasiavasiavasia95
 
 	if ((m_pSchedule->iInterruptMask & bits_COND_HEAR_SOUND) != 0 && (m_pSchedule->iSoundMask) == 0)
 	{
@@ -235,6 +236,10 @@ void CBaseMonster::MaintainSchedule()
 
 			// Notify the monster that his schedule is changing
 			ScheduleChange();
+
+			// vasiavasiavasia95
+			if (!m_bConditionsGathered) // occurs if a schedule is exhausted within one think
+				GatherConditions();
 
 			// Call GetIdealState if we're not dead and one or more of the following...
 			// - in COMBAT state with no enemy (it died?)

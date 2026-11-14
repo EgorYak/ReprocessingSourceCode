@@ -54,25 +54,24 @@ void CBaseMonster::SetState(MONSTERSTATE State)
 	m_MonsterState = State;
 	m_IdealMonsterState = State;
 }
-
-//=========================================================
-// RunAI
-//=========================================================
-void CBaseMonster::RunAI()
+// vasiavasiavasia95 start
+void CBaseMonster::GatherConditions(void)
 {
-	// to test model's eye height
-	//UTIL_ParticleEffect ( pev->origin + pev->view_ofs, g_vecZero, 255, 10 );
+	m_bConditionsGathered = true;
 
 	if (m_MonsterState != MONSTERSTATE_NONE &&
 		m_MonsterState != MONSTERSTATE_PRONE &&
 		m_MonsterState != MONSTERSTATE_DEAD) // don't bother with this crap if monster is prone.
 	{
+		bool bForcedGather = m_bForceConditionsGather;
+		m_bForceConditionsGather = false;
+
 		// collect some sensory Condition information.
 		// don't let monsters outside of the player's PVS act up, or most of the interesting
 		// things will happen before the player gets there!
 		// UPDATE: We now let COMBAT state monsters think and act fully outside of player PVS. This allows the player to leave
 		// an area where monsters are fighting, and the fight will continue.
-		if (!FNullEnt(FIND_CLIENT_IN_PVS(edict())) || (m_MonsterState == MONSTERSTATE_COMBAT))
+		if (bForcedGather || !FNullEnt(FIND_CLIENT_IN_PVS(edict())) || (m_MonsterState == MONSTERSTATE_COMBAT))
 		{
 			// IDLE sound permitted in ALERT state is because monsters were silent in ALERT state. Only play IDLE sound in IDLE state
 			// once we have sounds for that state.
@@ -98,6 +97,23 @@ void CBaseMonster::RunAI()
 
 		CheckAmmo();
 	}
+}
+// vasiavasiavasia95 end
+//=========================================================
+// RunAI
+//=========================================================
+void CBaseMonster::RunAI()
+{
+	// to test model's eye height
+	//UTIL_ParticleEffect ( pev->origin + pev->view_ofs, g_vecZero, 255, 10 );
+
+	// vasiavasiavasia95
+	m_bConditionsGathered = false;
+
+	GatherConditions();
+	if (!m_bConditionsGathered)
+		m_bConditionsGathered = true; // derived class didn't call to base
+	// vasiavasiavasia95
 
 	FCheckAITrigger();
 
