@@ -132,20 +132,12 @@ int DLLEXPORT HUD_GetStudioModelInterface(int version, struct r_studio_interface
 // Init
 // ---------------------------------------------------------------------------
 
+/*
 void CGameStudioModelRenderer::Init()
 {
 	CStudioModelRenderer::Init();
-
-	m_pBurnSprite = IEngineStudio.Mod_ForName(
-		BURN_SPRITE_PATH,
-		0
-	);
-
-	if (m_pBurnSprite && m_pBurnSprite->type != mod_sprite)
-	{
-		m_pBurnSprite = NULL;
-	}
 }
+*/
 
 
 // ---------------------------------------------------------------------------
@@ -179,15 +171,25 @@ int CGameStudioModelRenderer::StudioFindBone(const char* name)
 #include "event_api.h"
 void CGameStudioModelRenderer::StudioDrawBurnSprites()
 {
+	// Check current entity.
+	if (!m_pCurrentEntity)
+		return;
+
+	// Check effect flag.
+	if ((m_pCurrentEntity->curstate.effects & EF_SNIPERLASER) == 0)
+		return;
+
+	// Check bone transforms.
+	if (!m_plighttransform || !m_pStudioHeader)
+		return;
+
 	static const char* boneNames[] =
 	{
 		"Bip01 Head",
 		"Bip01 Spine2",
 		"Bip01 Pelvis",
-
 		"Bip01 L Arm1",
 		"Bip01 R Arm1",
-
 		"Bip01 L Leg1",
 		"Bip01 R Leg1"
 	};
@@ -213,26 +215,18 @@ void CGameStudioModelRenderer::StudioDrawBurnSprites()
 
 	int bone;
 
-	// Check current entity.
-	if (!m_pCurrentEntity)
-		return;
-
-	// Check effect flag.
-	if ((m_pCurrentEntity->curstate.effects & EF_SNIPERLASER) == 0)
-		return;
-
 	// Check sprite.
-	if (!m_pBurnSprite)
-		return;
+	model_t* m_pBurnSprite = IEngineStudio.Mod_ForName(
+		BURN_SPRITE_PATH,
+		0
+	);
 
-	if (m_pBurnSprite->type != mod_sprite)
+	if (m_pBurnSprite && m_pBurnSprite->type != mod_sprite)
+	{
+		m_pBurnSprite = NULL;
 		return;
-
+	}
 	if (m_pBurnSprite->numframes <= 0)
-		return;
-
-	// Check bone transforms.
-	if (!m_plighttransform || !m_pStudioHeader)
 		return;
 
 	// Calculate animation frame.

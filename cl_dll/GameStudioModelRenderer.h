@@ -18,13 +18,10 @@ class CGameStudioModelRenderer : public CStudioModelRenderer
 public:
 	CGameStudioModelRenderer();
 
-	virtual void Init();
+	//virtual void Init();
 	virtual void StudioRenderModel();
 
 protected:
 	int StudioFindBone(const char* name);
 	void StudioDrawBurnSprites();
-
-protected:
-	model_t* m_pBurnSprite;
 };
