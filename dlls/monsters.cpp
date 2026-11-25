@@ -107,6 +107,8 @@ TYPEDESCRIPTION CBaseMonster::m_SaveData[] =
 		DEFINE_FIELD(CBaseMonster,	m_bConditionsGathered, FIELD_BOOLEAN),
 		// vasiavasiavasia95
 
+		DEFINE_FIELD(CBaseMonster, m_bHeadshot, FIELD_BOOLEAN),
+
 		//		int					m_iAudibleList; // first index of a linked list of sounds that the monster can hear.
 		//	DEFINE_FIELD( CBaseMonster, m_afSoundTypes, FIELD_INTEGER ),
 		DEFINE_FIELD(CBaseMonster, m_vecLastPosition, FIELD_POSITION_VECTOR),
@@ -2509,7 +2511,7 @@ void CBaseMonster::MoveExecute(CBaseEntity* pTargetEnt, const Vector& vecDir, fl
 		ALERT(at_aiconsole, "%s: didn't move after move execute\n", STRING(pev->classname));
 		Vector velocity = m_Route[m_iRouteIndex].vecLocation - pev->origin;
 		velocity.z = 0.0f;
-		velocity.Normalize();
+		velocity.NormalizeInPlace();
 		velocity *= m_flGroundSpeed;
 		pev->velocity += velocity;
 

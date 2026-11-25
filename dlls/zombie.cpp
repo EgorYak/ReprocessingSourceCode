@@ -30,7 +30,7 @@
 
 #define SF_BURNING				8
 
-#define FIRE_SPRITE_NAME		"sprites/xffloor.spr"
+#define FIRE_SPRITE_NAME		"sprites/flames.spr"
 #define BURNIND_SOUND_NAME		"ambience/burning1.wav"
 
 //=========================================================
@@ -72,9 +72,9 @@ public:
 	void PrescheduleThink(void);
 	void FireUpdate(void);
 	void Killed(entvars_t *pevAttacker, int iGib);
+	void GibMonster();
 	//void SetActivity(Activity NewActivity);
 
-	CSprite		*m_pFire;		// fire
 	int		m_iFireBrightness;
 
 	virtual bool		Save(CSave &save);
@@ -100,7 +100,6 @@ LINK_ENTITY_TO_CLASS(monster_zombie, CZombie);
 
 TYPEDESCRIPTION	CZombie::m_SaveData[] =
 {
-	DEFINE_FIELD(CZombie, m_pFire, FIELD_CLASSPTR),
 	DEFINE_FIELD(CZombie, m_iFireBrightness, FIELD_INTEGER),
 };
 
@@ -153,8 +152,8 @@ void CZombie::PrescheduleThink(void)
 {
 	if (pev->spawnflags & SF_BURNING)
 	{
-		m_iFireBrightness = RANDOM_LONG(150, 250);
 		FireUpdate();
+		ClearBits(pev->spawnflags, SF_BURNING);
 	}
 }
 
@@ -163,45 +162,21 @@ void CZombie::PrescheduleThink(void)
 //=========================================================
 void CZombie::FireUpdate(void)
 {
-	if (m_pFire)
-	{
-		m_pFire->Animate(1);
-		UTIL_SetOrigin(m_pFire->pev, pev->origin + pev->view_ofs);
-		m_pFire->pev->renderamt = UTIL_Approach(m_iFireBrightness, m_pFire->pev->renderamt, 12);
-		if (m_pFire->pev->renderamt == 0)
-			m_pFire->pev->effects |= EF_NODRAW;
-		else
-		{
-			m_pFire->pev->effects &= ~EF_NODRAW;
-			Vector vecSrc = pev->origin;
-			MESSAGE_BEGIN(MSG_PVS, SVC_TEMPENTITY, vecSrc);
-			WRITE_BYTE(TE_DLIGHT);
-
-			WRITE_COORD(vecSrc.x); // Позиция...
-			WRITE_COORD(vecSrc.y);
-			WRITE_COORD(vecSrc.z);
-			WRITE_BYTE(14); // Радиус (300 унитов).
-
-			WRITE_BYTE(128); // Оттенок красного
-			WRITE_BYTE(128); // Оттенок зеленого
-			WRITE_BYTE(0); // Оттенок синего
-
-			WRITE_BYTE(2); // Продолжительность вспышки
-			WRITE_BYTE(4); // Кол-во кадров
-			MESSAGE_END();
-		}
-	}
+	EMIT_SOUND(ENT(pev), CHAN_ITEM, BURNIND_SOUND_NAME, 1.0, ATTN_NORM);
 }
 
 void CZombie::Killed(entvars_t *pevAttacker, int iGib)
 {
-	if (m_pFire)
-	{
-		m_iFireBrightness = 0;
-		UTIL_Remove(m_pFire);
-		m_pFire = NULL;
-	}
 	CBaseMonster::Killed(pevAttacker, iGib);
+}
+
+// GibMonster - create some gore and get rid of a monster's
+// model.
+//=========================================================
+void CZombie::GibMonster()
+{
+	STOP_SOUND(ENT(pev), CHAN_ITEM, BURNIND_SOUND_NAME);
+	CBaseMonster::GibMonster();
 }
 
 //=========================================================
@@ -474,16 +449,12 @@ void CZombie::Spawn()
 	m_MonsterState = MONSTERSTATE_NONE;
 	m_afCapability = bits_CAP_DOORS_GROUP;
 
+	MonsterInit();
+
 	if (pev->spawnflags & SF_BURNING)
 	{
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, BURNIND_SOUND_NAME, 1, ATTN_NORM);
-		m_pFire = CSprite::SpriteCreate(FIRE_SPRITE_NAME, pev->origin, true);
-		m_pFire->SetTransparency(kRenderGlow, 255, 255, 255, 0, kRenderFxNoDissipation);
-		m_pFire->SetScale(1);
-		//m_pFire->SetAttachment(ENT(pev), 0);
+		pev->effects |= EF_SNIPERLASER;
 	}
-
-	MonsterInit();
 }
 
 //=========================================================
@@ -492,6 +463,11 @@ void CZombie::Spawn()
 void CZombie::Precache()
 {
 	PRECACHE_MODEL("models/zombie.mdl");
+	if (pev->spawnflags & SF_BURNING)
+	{
+		PRECACHE_MODEL("sprites/flames.spr");
+		PRECACHE_SOUND(BURNIND_SOUND_NAME);
+	}
 
 	PRECACHE_SOUND_ARRAY(pAttackHitSounds);
 	PRECACHE_SOUND_ARRAY(pAttackMissSounds);

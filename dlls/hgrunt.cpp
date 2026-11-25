@@ -192,7 +192,6 @@ public:
 	int m_iShotgunShell;
 
 	int m_iSentence;
-	bool m_bHeadshot;
 
 	int m_iBuckshotInHead;
 	Vector m_vecHeadPos;
@@ -216,7 +215,6 @@ TYPEDESCRIPTION CHGrunt::m_SaveData[] =
 		//  DEFINE_FIELD( CShotgun, m_iBrassShell, FIELD_INTEGER ),
 		//  DEFINE_FIELD( CShotgun, m_iShotgunShell, FIELD_INTEGER ),
 		DEFINE_FIELD(CHGrunt, m_iSentence, FIELD_INTEGER),
-		DEFINE_FIELD(CHGrunt, m_bHeadshot, FIELD_BOOLEAN),
 		DEFINE_FIELD(CHGrunt, m_iBuckshotInHead, FIELD_INTEGER),
 };
 
@@ -673,6 +671,7 @@ void CHGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir,
 
 		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
 		{
+			pev->health = -flDamage;
 			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
 			switch (RANDOM_LONG(0, 1))
@@ -713,6 +712,7 @@ bool CHGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float 
 
 	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
 	{
+		pev->health = -flDamage;
 		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
 		switch (RANDOM_LONG(0, 1))
@@ -1168,6 +1168,11 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 //=========================================================
 void CHGrunt::Spawn()
 {
+	if (pev->body == -1)
+	{														 // -1 chooses a random head
+		pev->body = RANDOM_LONG(0, 5); // pick a head, any head
+	}
+
 	Precache();
 	if (pev	->model)
 		SET_MODEL(ENT(pev), STRING(pev->model));
@@ -1201,6 +1206,19 @@ void CHGrunt::Spawn()
 		// pev->weapons = HGRUNT_9MMAR | HGRUNT_GRENADELAUNCHER;
 	}
 
+	if (pev->body == 0 && FBitSet(pev->weapons, HGRUNT_SHOTGUN))
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_SHOTGUN);
+	}
+	else if (pev->body == 0 && FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_M203);
+	}
+	else if (pev->body == 0 && FBitSet(pev->weapons, HGRUNT_RPG))
+	{
+		SetBodygroup(HEAD_GROUP, HEAD_RPG);
+	}
+
 	if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
 	{
 		SetBodygroup(GUN_GROUP, GUN_SHOTGUN);
@@ -1218,6 +1236,7 @@ void CHGrunt::Spawn()
 	}
 	else
 	{
+		SetBodygroup(GUN_GROUP, GUN_MP5);
 		m_cClipSize = GRUNT_CLIP_SIZE;
 	}
 	m_cAmmoLoaded = m_cClipSize;
@@ -1227,15 +1246,6 @@ void CHGrunt::Spawn()
 
 	if (GetBodygroup(1) == HEAD_COMMANDER)
 		pev->skin = RANDOM_FLOAT(0, 5); // HACK! random skins for commander
-
-	if (FBitSet(pev->weapons, HGRUNT_SHOTGUN))
-	{
-		SetBodygroup(HEAD_GROUP, HEAD_SHOTGUN);
-	}
-	else if (FBitSet(pev->weapons, HGRUNT_GRENADELAUNCHER))
-	{
-		SetBodygroup(HEAD_GROUP, HEAD_M203);
-	}
 
 	CTalkMonster::g_talkWaitTime = 0;
 
@@ -2983,6 +2993,7 @@ void CNamGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDi
 
 		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
 		{
+			pev->health = -flDamage;
 			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
 			switch (RANDOM_LONG(0, 1))
@@ -3014,6 +3025,7 @@ bool CNamGrunt::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 
 	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
 	{
+		pev->health = -flDamage;
 		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
 		switch (RANDOM_LONG(0, 1))
@@ -3323,8 +3335,8 @@ void CVCGrunt::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir
 		if (GetBodygroup(1) == HEAD_GRUNT && (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB)) != 0)
 		{
 			// absorb damage
-			flDamage -= 20;
-			if (flDamage <= 0)
+			flDamage -= 10;
+			if (RANDOM_LONG(0, 5) == 5)
 			{
 				UTIL_Ricochet(ptr->vecEndPos, 1.0);
 				flDamage = 0.01;

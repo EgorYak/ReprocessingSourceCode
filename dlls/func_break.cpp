@@ -59,6 +59,8 @@ const char* CBreakable::pSpawnObjects[] =
 		"weapon_m60",	  // 21
 		"weapon_m16",	  // 22
 		"ammo_m16",			  // 23
+		"weapon_m40a1",	  // 24
+		"ammo_762",			  // 25
 };
 
 bool CBreakable::KeyValue(KeyValueData* pkvd)
@@ -893,7 +895,10 @@ void CPushable::Spawn()
 		Precache();
 
 	pev->movetype = MOVETYPE_PUSHSTEP;
-	pev->solid = SOLID_BBOX;
+	if ((pev->spawnflags & SF_PUSH_ALTER) != 0)
+		pev->solid = SOLID_BSP;
+	else
+		pev->solid = SOLID_BBOX;
 	SET_MODEL(ENT(pev), STRING(pev->model));
 
 	if (pev->friction > 399)

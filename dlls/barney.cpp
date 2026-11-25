@@ -614,8 +614,8 @@ void CBarney::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir,
 	case 10:
 		if ((bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_CLUB)) != 0)
 		{
-			flDamage -= 20;
-			if (flDamage <= 0)
+			flDamage -= 10;
+			if (RANDOM_LONG(0, 5) == 5)
 			{
 				UTIL_Ricochet(ptr->vecEndPos, 1.0);
 				flDamage = 0.01;

@@ -72,6 +72,11 @@ enum
 #define HOUND_AE_HOPBACK 6
 #define HOUND_AE_CLOSE_EYE 7
 
+#define HOUND_NORM 0
+#define HOUND_SMALL 1
+#define HOUND_ELECTRRIC 2
+#define HOUND_NEGATIVE 3
+
 class CHoundeye : public CSquadMonster
 {
 public:
@@ -284,6 +289,12 @@ void CHoundeye::HandleAnimEvent(MonsterEvent_t* pEvent)
 		break;
 
 	case HOUND_AE_STARTATTACK:
+		if (g_iSkillLevel == SKILL_HARD)
+			pev->framerate = 1.5;
+		else if (g_iSkillLevel == SKILL_MEDIUM)
+			pev->framerate = 1.2;
+		if (pev->body == HOUND_SMALL)
+			pev->framerate += 0.2;
 		WarmUpSound();
 		break;
 
@@ -381,11 +392,22 @@ void CHoundeye::Precache()
 	PRECACHE_SOUND("houndeye/he_attack1.wav");
 	PRECACHE_SOUND("houndeye/he_attack3.wav");
 
-	PRECACHE_SOUND("houndeye/he_blast1.wav");
-	PRECACHE_SOUND("houndeye/he_blast2.wav");
-	PRECACHE_SOUND("houndeye/he_blast3.wav");
+	if (pev->body == HOUND_NORM || pev->body == HOUND_SMALL)
+	{
+		PRECACHE_SOUND("houndeye/he_blast1.wav");
+		PRECACHE_SOUND("houndeye/he_blast2.wav");
+		PRECACHE_SOUND("houndeye/he_blast3.wav");
+	}
+	else
+	{
+		PRECACHE_SOUND("debris/zap1.wav");
+		PRECACHE_SOUND("debris/zap4.wav");
+	}
 
-	m_iSpriteTexture = PRECACHE_MODEL("sprites/shockwave.spr");
+	if (pev->body == HOUND_NORM || pev->body == HOUND_SMALL)
+		m_iSpriteTexture = PRECACHE_MODEL("sprites/shockwave.spr");
+	else
+		m_iSpriteTexture = PRECACHE_MODEL("sprites/lgtning.spr");
 }
 
 //=========================================================
@@ -549,6 +571,14 @@ void CHoundeye::WriteBeamColor()
 		bBlue = 255;
 	}
 
+	if (pev->body == HOUND_NEGATIVE)
+	{
+		bRed = 54;
+		int tempcolor = bGreen;
+		bGreen = bBlue;
+		bBlue = tempcolor;
+	}
+
 	WRITE_BYTE(bRed);
 	WRITE_BYTE(bGreen);
 	WRITE_BYTE(bBlue);
@@ -563,22 +593,40 @@ void CHoundeye::SonicAttack()
 	float flAdjustedDamage;
 	float flDist;
 
-	switch (RANDOM_LONG(0, 2))
+	if (pev->body == HOUND_NORM || pev->body == HOUND_SMALL)
 	{
-	case 0:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast1.wav", 1, ATTN_NORM);
-		break;
-	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast2.wav", 1, ATTN_NORM);
-		break;
-	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast3.wav", 1, ATTN_NORM);
-		break;
+		switch (RANDOM_LONG(0, 2))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast1.wav", 1, ATTN_NORM);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast2.wav", 1, ATTN_NORM);
+			break;
+		case 2:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_blast3.wav", 1, ATTN_NORM);
+			break;
+		}
+	}
+	else
+	{
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "debris/zap1.wav", 1, ATTN_NORM);
+			break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "debris/zap4.wav", 1, ATTN_NORM);
+			break;
+		}
 	}
 
 	// blast circles
 	MESSAGE_BEGIN(MSG_PAS, SVC_TEMPENTITY, pev->origin);
-	WRITE_BYTE(TE_BEAMCYLINDER);
+	if (pev->body == HOUND_NORM || pev->body == HOUND_SMALL)
+		WRITE_BYTE(TE_BEAMCYLINDER);
+	else
+		WRITE_BYTE(TE_BEAMDISK);
 	WRITE_COORD(pev->origin.x);
 	WRITE_COORD(pev->origin.y);
 	WRITE_COORD(pev->origin.z + 16);
@@ -665,10 +713,16 @@ void CHoundeye::SonicAttack()
 				}
 
 				//ALERT ( at_aiconsole, "Damage: %f\n", flAdjustedDamage );
+				// Small hounds produce a less amount of damage
+				if (pev->body == HOUND_SMALL)
+					flAdjustedDamage *= 0.7;
 
 				if (flAdjustedDamage > 0)
 				{
-					pEntity->TakeDamage(pev, pev, flAdjustedDamage, DMG_SONIC | DMG_ALWAYSGIB);
+					if (pev->body == HOUND_NORM || pev->body == HOUND_SMALL)
+						pEntity->TakeDamage(pev, pev, flAdjustedDamage, DMG_SONIC | DMG_ALWAYSGIB);
+					else
+						pEntity->TakeDamage(pev, pev, flAdjustedDamage, DMG_SHOCK | DMG_ALWAYSGIB);
 				}
 			}
 		}

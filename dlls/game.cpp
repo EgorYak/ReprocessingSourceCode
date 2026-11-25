@@ -25,6 +25,9 @@ cvar_t displaysoundlist = {"displaysoundlist", "0"};
 cvar_t fragsleft = {"mp_fragsleft", "0", FCVAR_SERVER | FCVAR_UNLOGGED}; // Don't spam console/log files/users with this changing
 cvar_t timeleft = {"mp_timeleft", "0", FCVAR_SERVER | FCVAR_UNLOGGED};	 // "      "
 
+// flashlight changer
+cvar_t flashlight_style = { "flashlight_style", "0", FCVAR_ARCHIVE };
+
 // multiplayer server rules
 cvar_t teamplay = {"mp_teamplay", "0", FCVAR_SERVER};
 cvar_t fraglimit = {"mp_fraglimit", "0", FCVAR_SERVER};
@@ -397,6 +400,11 @@ cvar_t sk_plr_762_bullet1 = { "sk_plr_762_bullet1", "0" };
 cvar_t sk_plr_762_bullet2 = { "sk_plr_762_bullet2", "0" };
 cvar_t sk_plr_762_bullet3 = { "sk_plr_762_bullet3", "0" };
 
+// sniper Round
+cvar_t sk_plr_762sn_bullet1 = { "sk_plr_762sn_bullet1", "0" };
+cvar_t sk_plr_762sn_bullet2 = { "sk_plr_762sn_bullet2", "0" };
+cvar_t sk_plr_762sn_bullet3 = { "sk_plr_762sn_bullet3", "0" };
+
 // M203 grenade
 cvar_t sk_plr_9mmAR_grenade1 = {"sk_plr_9mmAR_grenade1", "0"};
 cvar_t sk_plr_9mmAR_grenade2 = {"sk_plr_9mmAR_grenade2", "0"};
@@ -569,7 +577,7 @@ cvar_t sk_player_leg3 = {"sk_player_leg3", "1"};
 
 // Cvars for testing features
 
-cvar_t sk_adv_recoil = { "sk_adv_recoil", "1" };
+cvar_t sk_adv_recoil = { "sk_adv_recoil", "1", FCVAR_ARCHIVE};
 
 // Register your console variables here
 // This gets called one time when the game is initialied
@@ -598,6 +606,8 @@ void GameDLLInit()
 
 	CVAR_REGISTER(&fragsleft);
 	CVAR_REGISTER(&timeleft);
+
+	CVAR_REGISTER(&flashlight_style);
 
 	CVAR_REGISTER(&friendlyfire);
 	CVAR_REGISTER(&falldamage);
@@ -966,6 +976,11 @@ void GameDLLInit()
 	CVAR_REGISTER(&sk_plr_762_bullet1); // {"sk_plr_m16_bullet1","0"};
 	CVAR_REGISTER(&sk_plr_762_bullet2); // {"sk_plr_m16_bullet2","0"};
 	CVAR_REGISTER(&sk_plr_762_bullet3); // {"sk_plr_m16_bullet3","0"};
+
+	// sniper Round
+	CVAR_REGISTER(&sk_plr_762sn_bullet1); // {"sk_plr_m16_bullet1","0"};
+	CVAR_REGISTER(&sk_plr_762sn_bullet2); // {"sk_plr_m16_bullet2","0"};
+	CVAR_REGISTER(&sk_plr_762sn_bullet3); // {"sk_plr_m16_bullet3","0"};
 
 
 	// M203 grenade

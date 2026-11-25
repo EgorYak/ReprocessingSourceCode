@@ -86,6 +86,7 @@ public:
 #define SNARK_WEIGHT 5
 #define SATCHEL_WEIGHT -10
 #define TRIPMINE_WEIGHT -10
+#define SNIPERRIFLE_WEIGHT	10
 
 
 // weapon clip/carry ammo capacities
@@ -94,7 +95,7 @@ public:
 #define _556_MAX_CARRY 90
 #define _357_MAX_CARRY 35
 #define BUCKSHOT_MAX_CARRY 40
-#define BOLT_MAX_CARRY 40
+#define BOLT_MAX_CARRY 15
 #define ROCKET_MAX_CARRY 5
 #define HANDGRENADE_MAX_CARRY 5
 #define SATCHEL_MAX_CARRY 3
@@ -102,6 +103,7 @@ public:
 #define SNARK_MAX_CARRY 10
 #define HORNET_MAX_CARRY 100
 #define M203_GRENADE_MAX_CARRY 5
+#define SNIPERRIFLE_MAX_CARRY	15
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP -1
@@ -123,6 +125,7 @@ public:
 #define SATCHEL_MAX_CLIP WEAPON_NOCLIP
 #define TRIPMINE_MAX_CLIP WEAPON_NOCLIP
 #define SNARK_MAX_CLIP WEAPON_NOCLIP
+#define SNIPERRIFLE_MAX_CLIP	5
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -143,6 +146,7 @@ public:
 #define TRIPMINE_DEFAULT_GIVE 1
 #define SNARK_DEFAULT_GIVE 5
 #define HIVEHAND_DEFAULT_GIVE 100
+#define SNIPERRIFLE_DEFAULT_GIVE	5
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE 20
@@ -157,6 +161,7 @@ public:
 #define AMMO_RPGCLIP_GIVE RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE 20
 #define AMMO_SNARKBOX_GIVE 5
+#define AMMO_SNIPERRIFLE_GIVE	5
 
 // bullet types
 typedef enum
@@ -169,6 +174,7 @@ typedef enum
 	BULLET_PLAYER_BUCKSHOT, // shotgun
 	BULLET_PLAYER_CROWBAR,	// crowbar swipe
 	BULLET_PLAYER_762,		// m60
+	BULLET_PLAYER_762SN,		// m60
 
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_357,
@@ -492,6 +498,68 @@ public:
 bool bIsMultiplayer();
 void LoadVModel(const char* szViewModel, CBasePlayer* m_pPlayer);
 #endif
+
+enum SniperRifleAnim
+{
+	SNIPERRIFLE_DRAW = 0,
+	SNIPERRIFLE_SLOWIDLE,
+	SNIPERRIFLE_FIRE,
+	SNIPERRIFLE_FIRELASTROUND,
+	SNIPERRIFLE_RELOAD1,
+	SNIPERRIFLE_RELOAD2,
+	SNIPERRIFLE_RELOAD3,
+	SNIPERRIFLE_SLOWIDLE2,
+	SNIPERRIFLE_HOLSTER
+};
+
+class CSniperRifle : public CBasePlayerWeapon
+{
+public:
+	using BaseClass = CBasePlayerWeapon;
+
+#ifndef CLIENT_DLL
+	bool Save(CSave &save) override;
+	bool Restore(CRestore &restore) override;
+
+	static TYPEDESCRIPTION m_SaveData[];
+#endif
+
+	void Precache() override;
+	void Spawn() override;
+
+	bool Deploy() override;
+
+	void Holster() override;
+
+	void WeaponIdle() override;
+
+	void PrimaryAttack() override;
+
+	void SecondaryAttack() override;
+
+	void Reload() override;
+
+	int iItemSlot() override;
+
+	bool GetItemInfo(ItemInfo* p) override;
+
+	bool UseDecrement() override
+	{
+#if defined(CLIENT_WEAPONS)
+		return true;
+#else
+		return false;
+#endif
+	}
+
+	void ToggleZoom();
+
+private:
+	unsigned short m_usSniper;
+
+	bool m_bReloading;
+	float m_flReloadStart;
+};
 
 enum glock_e
 {

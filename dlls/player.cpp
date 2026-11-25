@@ -1036,6 +1036,7 @@ void CBasePlayer::TabulateAmmo()
 {
 	ammo_9mm = AmmoInventory(GetAmmoIndex("9mm"));
 	ammo_556 = AmmoInventory(GetAmmoIndex("556"));
+	ammo_762 = AmmoInventory(GetAmmoIndex("762"));
 	ammo_357 = AmmoInventory(GetAmmoIndex("357"));
 	ammo_argrens = AmmoInventory(GetAmmoIndex("ARgrenades"));
 	ammo_bolts = AmmoInventory(GetAmmoIndex("bolts"));
@@ -3473,7 +3474,11 @@ void CBasePlayer::GiveNamedItem(const char* szName, int defaultAmmo)
 
 bool CBasePlayer::FlashlightIsOn()
 {
-	return FBitSet(pev->effects, EF_DIMLIGHT);
+	bool flash_checker;
+	flash_checker = FBitSet(pev->effects, EF_DIMLIGHT);
+	if (!flash_checker)
+		flash_checker = FBitSet(pev->effects, EF_NIGHTVISION);
+	return flash_checker;
 }
 
 
@@ -3487,7 +3492,11 @@ void CBasePlayer::FlashlightTurnOn()
 	if (HasSuit())
 	{
 		EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM);
-		SetBits(pev->effects, EF_DIMLIGHT);
+		bool flashlight = (int)CVAR_GET_FLOAT("flashlight_style");
+		if (!flashlight)
+			SetBits(pev->effects, EF_DIMLIGHT);
+		else
+			SetBits(pev->effects, EF_NIGHTVISION);
 		MESSAGE_BEGIN(MSG_ONE, gmsgFlashlight, NULL, pev);
 		WRITE_BYTE(1);
 		WRITE_BYTE(m_iFlashBattery);
@@ -3502,6 +3511,7 @@ void CBasePlayer::FlashlightTurnOff()
 {
 	EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_OFF, 1.0, ATTN_NORM, 0, PITCH_NORM);
 	ClearBits(pev->effects, EF_DIMLIGHT);
+	ClearBits(pev->effects, EF_NIGHTVISION);
 	MESSAGE_BEGIN(MSG_ONE, gmsgFlashlight, NULL, pev);
 	WRITE_BYTE(0);
 	WRITE_BYTE(m_iFlashBattery);
@@ -3666,6 +3676,7 @@ void CBasePlayer::CheatImpulseCommands(int iImpulse)
 		GiveNamedItem("weapon_9mmAR");
 		GiveNamedItem("ammo_9mmAR");
 		GiveNamedItem("weapon_m16");
+		GiveNamedItem("weapon_sniperrifle");
 		GiveNamedItem("ammo_m16");
 		GiveNamedItem("ammo_ARgrenades");
 		GiveNamedItem("weapon_handgrenade");

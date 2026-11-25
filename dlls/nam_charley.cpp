@@ -27,6 +27,7 @@
 #include "soundent.h"
 #include "player.h"
 #include "animation.h"
+#include "weapons.h"
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -204,13 +205,15 @@ public:
 	void IdleSound() override;
 	void DeathSound() override;
 
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
+
 	static const char *pAttackHitSounds[];
 	static const char *pAttackMissSounds[];
 
 	// No range attacks
 	bool CheckRangeAttack1 ( float flDot, float flDist ) override;
 	bool CheckRangeAttack2 ( float flDot, float flDist ) override { return false; }
-	bool TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType ) override;
 
 	bool CheckMeleeAttack1( float flDot, float flDist ) override;
 
@@ -223,6 +226,9 @@ public:
 	float m_flNextFlinch;
 	float m_flNextThrowTime;
 
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
+
 	int m_iBrassShell;
 };
 
@@ -230,6 +236,7 @@ TYPEDESCRIPTION	CNamCharlie::m_SaveData[] =
 {
 	DEFINE_FIELD( CNamCharlie, m_flNextFlinch, FIELD_TIME ),
 	DEFINE_FIELD( CNamCharlie, m_flNextThrowTime, FIELD_TIME ),
+	DEFINE_FIELD(CNamCharlie, m_iBuckshotInHead, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE( CNamCharlie, CBaseMonster );
@@ -297,6 +304,76 @@ int	CNamCharlie :: Classify ()
 }
 
 //=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CNamCharlie::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			pev->body = 2;
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
+	CBaseMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
+//=========================================================
+// TakeDamage - overridden for the grunt because the grunt
+// needs to forget that he is in cover if he's hurt. (Obviously
+// not in a safe place anymore).
+//=========================================================
+bool CNamCharlie::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	// HACK HACK -- until we fix this.
+	if (IsAlive())
+		PainSound();
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->body = 2;
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
+
+	return CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+}
+
+//=========================================================
 // SetYawSpeed - allows each sequence to have a different
 // turn rate associated with it.
 //=========================================================
@@ -307,14 +384,6 @@ void CNamCharlie :: SetYawSpeed ()
 	ys = 120;
 
 	pev->yaw_speed = ys;
-}
-
-bool CNamCharlie :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
-{
-	// HACK HACK -- until we fix this.
-	if ( IsAlive() )
-		PainSound();
-	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
 
 void CNamCharlie :: PainSound()
@@ -531,6 +600,7 @@ void CNamCharlie :: Spawn()
 	m_afCapability		= bits_CAP_DOORS_GROUP;
 
 	m_flNextThrowTime = gpGlobals->time;
+	pev->body = RANDOM_LONG(0, 1);
 
 	MonsterInit();
 }
@@ -566,6 +636,9 @@ void CNamCharlie :: Precache()
 	PRECACHE_SOUND("gonome/gonome_step2.wav");
 	PRECACHE_SOUND("weapons/sks-1.wav");
 	PRECACHE_SOUND("weapons/sks-2.wav");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
 
 	m_iBrassShell = PRECACHE_MODEL("models/shell.mdl"); // brass shell
 }	

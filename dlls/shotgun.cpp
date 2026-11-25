@@ -34,7 +34,11 @@ void CShotgun::Spawn()
 	m_iId = WEAPON_SHOTGUN;
 	SET_MODEL(ENT(pev), "models/w_shotgun.mdl");
 
+#ifdef CLIENT_DLL
 	m_iDefaultAmmo = SHOTGUN_DEFAULT_GIVE;
+#else
+	m_iDefaultAmmo = SHOTGUN_DEFAULT_GIVE / g_iSkillLevel;
+#endif
 	m_bEmpty = false;
 
 	FallInit(); // get ready to fall

@@ -995,7 +995,8 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 
 	if (view->model)
 	{
-		if (!strcmp(view->model->name, "models/v_crossbow.mdl"))
+		if (!strcmp(view->model->name, "models/v_crossbow.mdl") || !strcmp(view->model->name, "models/v_m40a1.mdl") ||
+			!strcmp(view->model->name, "models/v_m16.mdl") || !strcmp(view->model->name, "models/v_crowbar.mdl"))
 		{
 			blendMouseX *= 0.9f;
 			blendMouseY *= 0.9f;

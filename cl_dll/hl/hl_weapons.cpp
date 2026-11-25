@@ -17,6 +17,7 @@
 #include "cbase.h"
 #include "monsters.h"
 #include "weapons.h"
+#include "CSniperRifle.h"
 #include "player.h"
 
 #include "usercmd.h"
@@ -66,6 +67,7 @@ CTripmine g_Tripmine;
 CSqueak g_Snark;
 CM16 g_M16;
 CRevolver g_Revolver;
+CSniperRifle g_SniperRifle;
 
 
 /*
@@ -468,6 +470,7 @@ void HUD_InitClientWeapons()
 	HUD_PrepEntity(&g_Snark, &player);
 	HUD_PrepEntity(&g_M16, &player);
 	HUD_PrepEntity(&g_Revolver, &player);
+	HUD_PrepEntity(&g_SniperRifle, &player);
 }
 
 /*
@@ -598,6 +601,10 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 	case WEAPON_REVOLVER:
 		pWeapon = &g_Revolver;
 		break;
+
+	case WEAPON_SNIPERRIFLE:
+		pWeapon = &g_SniperRifle;
+		break;
 	}
 
 	// Store pointer to our destination entity_state_t so we can get our origin, etc. from it
@@ -692,12 +699,13 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 	player.ammo_9mm = (int)from->client.vuser1[0];
 	player.ammo_357 = (int)from->client.vuser1[1];
 	player.ammo_argrens = (int)from->client.vuser1[2];
-	player.ammo_556 = (int)from->client.vuser3[0];
+	player.ammo_556 = (int)from->client.vuser2[1];
 	player.ammo_bolts = (int)from->client.ammo_nails; //is an int anyways...
 	player.ammo_buckshot = (int)from->client.ammo_shells;
 	player.ammo_uranium = (int)from->client.ammo_cells;
 	player.ammo_hornets = (int)from->client.vuser2[0];
 	player.ammo_rockets = (int)from->client.ammo_rockets;
+	player.ammo_762 = (int)from->client.vuser2[2];
 
 
 	// Point to current weapon object
@@ -767,13 +775,14 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 	to->client.vuser1[0] = player.ammo_9mm;
 	to->client.vuser1[1] = player.ammo_357;
 	to->client.vuser1[2] = player.ammo_argrens;
-	to->client.vuser3[0] = player.ammo_556;
+	to->client.vuser2[1] = player.ammo_556;
 
 	to->client.ammo_nails = player.ammo_bolts;
 	to->client.ammo_shells = player.ammo_buckshot;
 	to->client.ammo_cells = player.ammo_uranium;
 	to->client.vuser2[0] = player.ammo_hornets;
 	to->client.ammo_rockets = player.ammo_rockets;
+	to->client.vuser2[2] = player.ammo_762;
 
 	if (player.m_pActiveItem->m_iId == WEAPON_RPG)
 	{

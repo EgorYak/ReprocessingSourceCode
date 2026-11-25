@@ -90,6 +90,9 @@ cvar_t* cl_rollangle = nullptr;
 cvar_t* cl_rollspeed = nullptr;
 cvar_t* cl_bobtilt = nullptr;
 cvar_t* cl_viewlag = nullptr;
+// HACK - reg server cvars on client for saving their values
+cvar_t* flashlight_style = NULL;
+cvar_t* sk_adv_recoil = NULL;
 
 void ShutdownInput();
 
@@ -393,6 +396,9 @@ void CHud::Init()
 	cl_rollspeed = CVAR_CREATE("cl_rollspeed", "200", FCVAR_ARCHIVE);
 	cl_bobtilt = CVAR_CREATE("cl_bobtilt", "0", FCVAR_ARCHIVE);
 	cl_viewlag = CVAR_CREATE("cl_viewlag", "1", FCVAR_ARCHIVE);
+	// HACK - add server cvars on client to preserve values
+	flashlight_style = CVAR_CREATE( "flashlight_style", "0", FCVAR_ARCHIVE );
+	sk_adv_recoil = CVAR_CREATE("sk_adv_recoil", "1", FCVAR_ARCHIVE);
 
 	m_pSpriteList = NULL;
 

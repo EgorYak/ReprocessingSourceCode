@@ -216,6 +216,9 @@ public:
 
 	int		m_iSentence;
 
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
+
 	int m_iAssassinHead;
 
 	bool m_bHeadshot;
@@ -240,6 +243,7 @@ TYPEDESCRIPTION	CMOFAssassin::m_SaveData[] =
 //  DEFINE_FIELD( CShotgun, m_iShotgunShell, FIELD_INTEGER ),
 	DEFINE_FIELD( CMOFAssassin, m_iSentence, FIELD_INTEGER ),
 	DEFINE_FIELD( CMOFAssassin, m_iAssassinHead, FIELD_INTEGER ),
+	DEFINE_FIELD(CMOFAssassin, m_iBuckshotInHead, FIELD_INTEGER),
 	DEFINE_FIELD( CMOFAssassin, m_flLastShot, FIELD_TIME ),
 	DEFINE_FIELD( CMOFAssassin, m_fStandingGround, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMOFAssassin, m_flStandGroundRange, FIELD_FLOAT ),
@@ -634,6 +638,35 @@ void CMOFAssassin :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector
 		// it's head shot anyways
 		ptr->iHitgroup = HITGROUP_HEAD;
 	}
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			pev->health = -flDamage;
+			SetBodygroup(MAssassinBodygroup::Heads, MAssassinHead::Headshot);
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
 
 	CSquadMonster::TraceAttack( pevAttacker, flDamage, vecDir, ptr, bitsDamageType );
 }
@@ -647,6 +680,29 @@ void CMOFAssassin :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector
 bool CMOFAssassin :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
 	Forget( bits_MEMORY_INCOVER );
+
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->health = -flDamage;
+		SetBodygroup(MAssassinBodygroup::Heads, MAssassinHead::Headshot);
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
 
 	return CSquadMonster :: TakeDamage ( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
@@ -1078,6 +1134,9 @@ void CMOFAssassin :: Precache()
 	PRECACHE_SOUND( "weapons/glauncher.wav" );
 
 	PRECACHE_SOUND( "weapons/sbarrel1.wav" );
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
 
 	PRECACHE_SOUND("zombie/claw_miss2.wav");// because we use the basemonster SWIPE animation event
 

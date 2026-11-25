@@ -42,6 +42,7 @@ TYPEDESCRIPTION CTalkMonster::m_SaveData[] =
 		DEFINE_FIELD(CTalkMonster, m_useTime, FIELD_TIME),
 		DEFINE_FIELD(CTalkMonster, m_iszUse, FIELD_STRING),
 		DEFINE_FIELD(CTalkMonster, m_iszUnUse, FIELD_STRING),
+		DEFINE_FIELD(CTalkMonster, m_iszFollowTarget, FIELD_STRING),
 		DEFINE_FIELD(CTalkMonster, m_flLastSaidSmelled, FIELD_TIME),
 		DEFINE_FIELD(CTalkMonster, m_flStopTalkTime, FIELD_TIME),
 		DEFINE_FIELD(CTalkMonster, m_hTalkTarget, FIELD_EHANDLE),
@@ -1404,6 +1405,15 @@ void CTalkMonster::FollowerUse(CBaseEntity* pActivator, CBaseEntity* pCaller, US
 	if (m_useTime > gpGlobals->time)
 		return;
 
+	// m_iszFollowTarget - trigger something on use
+	// In our case used for player saying something on using monster
+	bool trigger_on_use = m_iszFollowTarget && STRING(m_iszFollowTarget)[0] != '\0';
+	if (trigger_on_use)
+	{
+		ALERT(at_aiconsole, "On Use Trigger Fire Target\n");
+		FireTargets(STRING(m_iszFollowTarget), this, this, USE_TOGGLE, 0);
+	}
+
 	if (pCaller != NULL && pCaller->IsPlayer())
 	{
 		// Pre-disaster followers can't be used
@@ -1440,6 +1450,11 @@ bool CTalkMonster::KeyValue(KeyValueData* pkvd)
 	else if (FStrEq(pkvd->szKeyName, "UnUseSentence"))
 	{
 		m_iszUnUse = ALLOC_STRING(pkvd->szValue);
+		return true;
+	}
+	else if (FStrEq(pkvd->szKeyName, "TargetOnUse"))
+	{
+		m_iszFollowTarget = ALLOC_STRING(pkvd->szValue);
 		return true;
 	}
 

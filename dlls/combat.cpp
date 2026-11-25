@@ -437,7 +437,8 @@ void CBaseMonster::GibMonster()
 	{
 		if (CVAR_GET_FLOAT("violence_hgibs") != 0) // Only the player will ever get here
 		{
-			CGib::SpawnHeadGib(pev);
+			if (!m_bHeadshot)
+				CGib::SpawnHeadGib(pev);
 			CGib::SpawnRandomGibs(pev, 4, true); // throw some human gibs.
 		}
 		gibbed = true;
@@ -1788,6 +1789,10 @@ Vector CBaseEntity::FireBulletsPlayer(unsigned int cShots, Vector vecSrc, Vector
 
 				case BULLET_PLAYER_762:
 					pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg762, vecDir, &tr, DMG_BULLET);
+					break;
+
+				case BULLET_PLAYER_762SN:
+					pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg762sn, vecDir, &tr, DMG_BULLET);
 					break;
 
 				case BULLET_NONE: // FIX

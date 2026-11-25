@@ -117,6 +117,8 @@ public:
 
 	bool m_AllowItemDropping = true;
 
+	bool m_bHeadshot;
+
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 

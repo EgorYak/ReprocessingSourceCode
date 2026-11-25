@@ -35,7 +35,11 @@ void CM16::Spawn()
 	SET_MODEL(ENT(pev), "models/w_m16.mdl");
 	m_iId = WEAPON_M16;
 
+#ifdef CLIENT_DLL
 	m_iDefaultAmmo = M16_DEFAULT_GIVE;
+#else
+	m_iDefaultAmmo = M16_DEFAULT_GIVE / g_iSkillLevel;
+#endif
 
 	FallInit(); // get ready to fall down.
 }

@@ -119,6 +119,25 @@ public:
 		return Vector(x * flLen, y * flLen, z * flLen);
 	}
 
+	float NormalizeInPlace()
+	{
+		const float flLen = Length();
+		if (flLen == 0)
+		{
+			x = 0;
+			y = 0;
+			z = 1;
+		}
+		else
+		{
+			float den = 1 / flLen;
+			x *= den;
+			y *= den;
+			z *= den;
+		}
+		return flLen;
+	}
+
 	[[nodiscard]] constexpr Vector2D Make2D() const
 	{
 		return {x, y};

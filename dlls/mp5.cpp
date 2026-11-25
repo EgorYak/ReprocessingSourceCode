@@ -36,7 +36,11 @@ void CMP5::Spawn()
 	SET_MODEL(ENT(pev), "models/w_9mmAR.mdl");
 	m_iId = WEAPON_MP5;
 
+#ifdef CLIENT_DLL
 	m_iDefaultAmmo = MP5_DEFAULT_GIVE;
+#else
+	m_iDefaultAmmo = MP5_DEFAULT_GIVE / g_iSkillLevel;
+#endif
 
 	FallInit(); // get ready to fall down.
 }

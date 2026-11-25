@@ -306,6 +306,10 @@ void W_Precache()
 	UTIL_PrecacheOther("ammo_m16");
 	UTIL_PrecacheOther("ammo_ARgrenades");
 
+	// m40
+	UTIL_PrecacheOtherWeapon("weapon_sniperrifle");
+	UTIL_PrecacheOther("ammo_762");
+
 	// python
 	UTIL_PrecacheOtherWeapon("weapon_357");
 	UTIL_PrecacheOtherWeapon("weapon_python");

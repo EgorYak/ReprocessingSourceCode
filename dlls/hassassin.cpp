@@ -61,11 +61,11 @@ enum
 #define		ASSASSIN_AE_SHOOT2	4
 #define		ASSASSIN_AE_CROSSBOW	5
 
-#define HEAD_GROUP 1
+#define HEAD_GROUP 2
 #define HEAD_NVG 0
 #define HEAD_MASK 1
 #define HEAD_SHOT 2
-#define GUN_GROUP 2
+#define GUN_GROUP 1
 #define GUN_DEFAULT 0
 
 #define HASSASSIN_ONE (1 << 0)
@@ -157,6 +157,8 @@ public:
 
 	int		m_iFrustration;
 
+	int m_iBuckshotInHead;
+
 	int		m_iShell;
 
 	bool m_bHeadshot;
@@ -178,6 +180,8 @@ TYPEDESCRIPTION	CHAssassin::m_SaveData[] =
 
 	DEFINE_FIELD(CHAssassin, m_iTargetRanderamt, FIELD_INTEGER),
 	DEFINE_FIELD(CHAssassin, m_iFrustration, FIELD_INTEGER),
+
+	DEFINE_FIELD(CHAssassin, m_iBuckshotInHead, FIELD_INTEGER),
 
 	DEFINE_FIELD(CHAssassin, m_bHeadshot, FIELD_BOOLEAN),
 };
@@ -226,13 +230,26 @@ bool CHAssassin::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, flo
 {
 	Forget(bits_MEMORY_INCOVER);
 
-	/*if (m_bHeadshot)
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
 	{
-		Vector	vecAng = Vector(0, 0, 68);
+		pev->health = -flDamage;
+		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
 
-		CGib::SpawnStickyGibs(pev, vecAng, 6);
-		SetBodygroup(2, 2);
-	}*/
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
+
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
@@ -280,13 +297,30 @@ void CHAssassin::DeadUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 //=========================================================
 void CHAssassin::TraceAttack(entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
 {
-	//switch (ptr->iHitgroup)
-	//{
-	//case HITGROUP_HEAD:
-	//	if (m_bHeadshot)
-	//		return;
-	//	break;
-	//}
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+		}
+	}
 	CSquadMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
 }
 
@@ -587,6 +621,9 @@ void CHAssassin::Precache()
 	PRECACHE_SOUND("ops/fa_die4.wav");
 
 	PRECACHE_SOUND("debris/beamstart1.wav");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
 
 	m_iShell = PRECACHE_MODEL("models/shell.mdl");// brass shell
 }

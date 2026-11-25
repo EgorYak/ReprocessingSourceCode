@@ -31,6 +31,10 @@
 #define HASSAULT_VOL 0.35		 // volume of Assault sounds
 #define HASSAULT_ATTN ATTN_NORM // attenutation of Assault sentences
 
+#define HEAD_GROUP 3
+#define HEAD_NORM 0
+#define HEAD_SHOT 1
+
 //=========================================================
 // Monster's Anim Events Go Here
 //=========================================================
@@ -81,6 +85,7 @@ public:
 	bool CheckRangeAttack1 ( float flDot, float flDist );
 	bool CheckRangeAttack2(float flDot, float flDist);
 
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 
 	bool	Save( CSave &save ); 
@@ -114,6 +119,9 @@ public:
 	float m_flNextGrenadeCheck;
 	Vector	m_vecTossVelocity;
 
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
+
 	int		m_iSentence, m_cClipSize;
 
 	static const char* pAssaultSentences[];
@@ -128,6 +136,7 @@ TYPEDESCRIPTION	CHassault::m_SaveData[] =
 	DEFINE_FIELD( CHassault, m_flNextGrenadeCheck, FIELD_TIME ),
 	DEFINE_FIELD( CHassault, m_vecTossVelocity, FIELD_VECTOR ),
 	DEFINE_FIELD( CHassault, m_cClipSize, FIELD_INTEGER ),
+	DEFINE_FIELD(CHassault, m_iBuckshotInHead, FIELD_INTEGER),
 		DEFINE_FIELD(CHassault, m_iSentence, FIELD_INTEGER),
 };
 
@@ -265,6 +274,43 @@ void CHassault :: CheckAmmo ( void )
 }
 
 //=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CHassault::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	if (ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			pev->health = -flDamage;
+			SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
+	CSquadMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
+//=========================================================
 // TakeDamage - overridden for the grunt because the grunt
 // needs to forget that he is in cover if he's hurt. (Obviously
 // not in a safe place anymore).
@@ -272,6 +318,29 @@ void CHassault :: CheckAmmo ( void )
 bool CHassault::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
 	Forget(bits_MEMORY_INCOVER);
+
+	if (!m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->health = -flDamage;
+		SetBodygroup(HEAD_GROUP, HEAD_SHOT);
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+
+		m_bHeadshot = 1;
+	}
+
+	m_iBuckshotInHead = 0;
 
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
@@ -394,6 +463,9 @@ void CHassault::Precache()
 	PRECACHE_SOUND("hassault/hw_spin.wav");
 	PRECACHE_SOUND("hassault/hw_spindown.wav");
 	PRECACHE_SOUND("hassault/hw_spinup.wav");
+
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
 
 	PRECACHE_SOUND( "weapons/glauncher.wav" );
 

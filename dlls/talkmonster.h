@@ -168,6 +168,8 @@ public:
 	int m_iszUse;					  // Custom +USE sentence group (follow)
 	int m_iszUnUse;					  // Custom +USE sentence group (stop following)
 
+	int m_iszFollowTarget;					  // target on followuse
+
 	float m_flLastSaidSmelled; // last time we talked about something that stinks
 	float m_flStopTalkTime;	   // when in the future that I'll be done saying this sentence.
 

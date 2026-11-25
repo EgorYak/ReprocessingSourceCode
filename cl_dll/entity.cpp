@@ -157,6 +157,19 @@ void DLLEXPORT HUD_ProcessPlayerState(struct entity_state_s* dst, const struct e
 		g_iUser2 = src->iuser2;
 		g_iUser3 = src->iuser3;
 	}
+	
+	// Check effect flag.
+	if ((src->effects & EF_NIGHTVISION) == 0)
+		return;
+
+	// create custom dlight for our new effect
+	dlight_t *dl = gEngfuncs.pEfxAPI->CL_AllocDlight(player->index);
+	dl->origin = player->origin;
+	dl->die = gEngfuncs.GetClientTime() + 0.01f;
+	dl->color.r = 250;
+	dl->color.g = 250;
+	dl->color.b = 250;
+	dl->radius = 256;
 }
 
 /*

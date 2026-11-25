@@ -469,6 +469,8 @@ inline DLL_GLOBAL int g_Language;
 
 // func_pushable (it's also func_breakable, so don't collide with those flags)
 #define SF_PUSH_BREAKABLE 128
+// alt solid for func_pushable
+#define SF_PUSH_ALTER 256
 
 #define SF_LIGHT_START_OFF 1
 
