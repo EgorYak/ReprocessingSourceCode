@@ -13,7 +13,7 @@
 // Global engine <-> studio model rendering code interface
 extern engine_studio_api_t IEngineStudio;
 
-struct model_s	*m_pShells[2];
+struct model_s	*m_pShells[4];
 
 extern Vector v_sim_vel, v_angles;
 
@@ -59,6 +59,9 @@ void EjectBrass(Vector vecOrigin, const Vector &angles, const Vector &gunAngles,
 		m_pShells[0] = IEngineStudio.Mod_ForName("models/shell.mdl", true);
 
 		m_pShells[1] = IEngineStudio.Mod_ForName("models/shotgunshell.mdl", true);
+
+		m_pShells[2] = IEngineStudio.Mod_ForName("models/762shell.mdl", true);
+		m_pShells[3] = IEngineStudio.Mod_ForName("models/556shell.mdl", true);
 	}
 
 	const model_s *pModel = m_pShells[type];

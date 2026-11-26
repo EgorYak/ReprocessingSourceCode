@@ -290,11 +290,11 @@ void CHoundeye::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case HOUND_AE_STARTATTACK:
 		if (g_iSkillLevel == SKILL_HARD)
-			pev->framerate = 1.5;
+			pev->framerate = 2.0;
 		else if (g_iSkillLevel == SKILL_MEDIUM)
-			pev->framerate = 1.2;
+			pev->framerate = 1.5;
 		if (pev->body == HOUND_SMALL)
-			pev->framerate += 0.2;
+			pev->framerate += 0.5;
 		WarmUpSound();
 		break;
 

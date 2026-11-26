@@ -421,11 +421,23 @@ void CBaseEntity::ProcessChild(void)
 		pev->origin = pParentOrigin + (forward * ChildOffsetOrigin.x) + (right * ChildOffsetOrigin.y) + (up * ChildOffsetOrigin.z);
 	else	pev->origin = pParentOrigin + (forward * ChildOffsetOrigin.x) + (-right * ChildOffsetOrigin.y) + (up * ChildOffsetOrigin.z);
 	
+	if (m_pParent && m_pParent->pev->movetype == MOVETYPE_PUSH)
+	{
+		float movetime = gpGlobals->frametime;
+		const float thinktime = m_pParent->pev->nextthink;
+		if (thinktime < m_pParent->pev->ltime + movetime)
+			movetime = V_max(thinktime - m_pParent->pev->ltime, 0.0f);
+
+		pev->origin += m_pParent->pev->velocity * movetime;
+	}
+
+	/*
 	if (m_pParent->pev->velocity != pev->velocity)
 	{
 		pev->velocity = m_pParent->pev->velocity;
 		//pev->origin = pev->origin + pev->velocity;
 	}
+	*/
 
 	//UTIL_SetOrigin(this, pev->origin); // это вариант функции для спирита
 	UTIL_SetOrigin(pev, pev->origin);//это вариант функции для обычного ХЛ

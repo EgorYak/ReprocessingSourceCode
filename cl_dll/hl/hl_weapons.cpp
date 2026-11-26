@@ -68,6 +68,7 @@ CSqueak g_Snark;
 CM16 g_M16;
 CRevolver g_Revolver;
 CSniperRifle g_SniperRifle;
+CShowel g_Showel;
 
 
 /*
@@ -471,6 +472,7 @@ void HUD_InitClientWeapons()
 	HUD_PrepEntity(&g_M16, &player);
 	HUD_PrepEntity(&g_Revolver, &player);
 	HUD_PrepEntity(&g_SniperRifle, &player);
+	HUD_PrepEntity(&g_Showel, &player);
 }
 
 /*
@@ -604,6 +606,10 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 
 	case WEAPON_SNIPERRIFLE:
 		pWeapon = &g_SniperRifle;
+		break;
+
+	case WEAPON_SHOWEL:
+		pWeapon = &g_Showel;
 		break;
 	}
 

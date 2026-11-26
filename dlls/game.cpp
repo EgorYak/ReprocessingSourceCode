@@ -375,6 +375,11 @@ cvar_t sk_plr_crowbar1 = {"sk_plr_crowbar1", "0"};
 cvar_t sk_plr_crowbar2 = {"sk_plr_crowbar2", "0"};
 cvar_t sk_plr_crowbar3 = {"sk_plr_crowbar3", "0"};
 
+// Crowbar whack
+cvar_t sk_plr_showel1 = { "sk_plr_showel1", "0" };
+cvar_t sk_plr_showel2 = { "sk_plr_showel2", "0" };
+cvar_t sk_plr_showel3 = { "sk_plr_showel3", "0" };
+
 // Glock Round
 cvar_t sk_plr_9mm_bullet1 = {"sk_plr_9mm_bullet1", "0"};
 cvar_t sk_plr_9mm_bullet2 = {"sk_plr_9mm_bullet2", "0"};
@@ -951,6 +956,11 @@ void GameDLLInit()
 	CVAR_REGISTER(&sk_plr_crowbar1); // {"sk_plr_crowbar1","0"};
 	CVAR_REGISTER(&sk_plr_crowbar2); // {"sk_plr_crowbar2","0"};
 	CVAR_REGISTER(&sk_plr_crowbar3); // {"sk_plr_crowbar3","0"};
+
+	// Showel pizdjyk
+	CVAR_REGISTER(&sk_plr_showel1); // {"sk_plr_crowbar1","0"};
+	CVAR_REGISTER(&sk_plr_showel2); // {"sk_plr_crowbar2","0"};
+	CVAR_REGISTER(&sk_plr_showel3); // {"sk_plr_crowbar3","0"};
 
 	// Glock Round
 	CVAR_REGISTER(&sk_plr_9mm_bullet1); // {"sk_plr_9mm_bullet1","0"};

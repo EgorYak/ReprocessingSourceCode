@@ -29,7 +29,7 @@ TYPEDESCRIPTION	CSniperRifle::m_SaveData[] =
 	DEFINE_FIELD( CSniperRifle, m_bReloading, FIELD_BOOLEAN ),
 };
 
-IMPLEMENT_SAVERESTORE( CSniperRifle, CSniperRifle::BaseClass );
+IMPLEMENT_SAVERESTORE( CSniperRifle, CBasePlayerWeapon);
 #endif
 
 LINK_ENTITY_TO_CLASS( weapon_sniperrifle, CSniperRifle );
@@ -37,8 +37,6 @@ LINK_ENTITY_TO_CLASS( weapon_sniperrifle, CSniperRifle );
 void CSniperRifle::Precache()
 {
 	pev->classname = MAKE_STRING( "weapon_sniperrifle" );
-
-	BaseClass::Precache();
 
 	m_iId = WEAPON_SNIPERRIFLE;
 
@@ -53,6 +51,8 @@ void CSniperRifle::Precache()
 	PRECACHE_SOUND( "weapons/sniper_miss.wav" );
 	PRECACHE_SOUND( "weapons/sniper_bolt1.wav" );
 	PRECACHE_SOUND( "weapons/sniper_bolt2.wav" );
+
+	m_iShell = PRECACHE_MODEL("models/762shell.mdl"); // brass shellTE_MODEL
 
 	m_usSniper = PRECACHE_EVENT( 1, "events/sniper.sc" );
 }
@@ -70,7 +70,7 @@ void CSniperRifle::Spawn()
 
 bool CSniperRifle::Deploy()
 {
-	return BaseClass::DefaultDeploy( "models/v_m40a1.mdl", "models/p_m40a1.mdl", SNIPERRIFLE_DRAW, "bow" );
+	return DefaultDeploy( "models/v_m40a1.mdl", "models/p_m40a1.mdl", SNIPERRIFLE_DRAW, "bow" );
 }
 
 void CSniperRifle::Holster(  )
@@ -157,6 +157,8 @@ void CSniperRifle::PrimaryAttack()
 	flags = 0;
 #endif
 
+	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
 	PLAYBACK_EVENT_FULL(flags,
 							m_pPlayer->edict(), m_usSniper, 0, 
 							g_vecZero, g_vecZero, 
@@ -170,14 +172,16 @@ void CSniperRifle::PrimaryAttack()
 
 void CSniperRifle::SecondaryAttack()
 {
+	if (m_pPlayer->m_afButtonLast & IN_ATTACK2)
+	{
+		return;
+	}
 	EMIT_SOUND_DYN( m_pPlayer->edict(), CHAN_ITEM, "weapons/sniper_zoom.wav",  VOL_NORM, ATTN_NORM, 0, PITCH_NORM );
 
 	ToggleZoom();
 
-	//TODO: this doesn't really make sense
-	pev->nextthink = 0.1;
-
-	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
+	pev->nextthink = UTIL_WeaponTimeBase() + 0.1;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.0;
 }
 
 void CSniperRifle::Reload()
@@ -221,7 +225,7 @@ bool CSniperRifle::GetItemInfo( ItemInfo* p )
 	p->pszAmmo1 = "762";
 	p->iMaxAmmo1 = SNIPERRIFLE_MAX_CARRY;
 	p->pszName = STRING( pev->classname );
-	p->pszAmmo2 = 0;
+	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = WEAPON_NOCLIP;
 	p->iMaxClip = SNIPERRIFLE_MAX_CLIP;
 	p->iSlot = 2;

@@ -69,7 +69,7 @@ bool CHudZoom::Draw(float flTime)
 	cl_entity_t* gunModel = gEngfuncs.GetViewModel();
 
 	gunModel->model = NULL; // disable weapon model
-	gEngfuncs.pfnWeaponAnim(0, 0);
+	//gEngfuncs.pfnWeaponAnim(0, 0);
 
 	gEngfuncs.pTriAPI->RenderMode(kRenderTransColor);
 	gEngfuncs.pTriAPI->Brightness(1.0);

@@ -34,7 +34,8 @@ void EV_EgonStop(event_args_t* args);
 void EV_HornetGunFire(event_args_t* args);
 void EV_TripmineFire(event_args_t* args);
 void EV_SnarkFire(event_args_t* args);
-void EV_SniperRifle(struct event_args_s* args);
+void EV_SniperRifle(event_args_s* args);
+void EV_Showel(event_args_t *args);
 
 
 

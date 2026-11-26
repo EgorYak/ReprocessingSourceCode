@@ -130,6 +130,7 @@ struct skilldata_t
 	float plrDmgHandGrenade;
 	float plrDmgSatchel;
 	float plrDmgTripmine;
+	float plrDmgShowel;
 
 	// weapons shared by monsters
 	float monDmg9MM;

@@ -1763,8 +1763,6 @@ void EV_SnarkFire(event_args_t* args)
 //	   SQUEAK END
 //======================
 
-#include "CSniperRifle.h"
-
 void EV_SniperRifle(event_args_t* args)
 {
 	const int idx = args->entindex;
@@ -1792,7 +1790,7 @@ void EV_SniperRifle(event_args_t* args)
 	Vector vecAiming = forward;
 
 	EV_GetGunPosition(args, vecSrc, vecOrigin);
-
+	EV_HLDM_MuzzleFlash(vecSrc, 1.0 + gEngfuncs.pfnRandomFloat(-0.2, 0.2));
 	EV_HLDM_FireBullets(
 		idx,
 		forward,
@@ -1808,6 +1806,79 @@ void EV_SniperRifle(event_args_t* args)
 		args->fparam1,
 		args->fparam2);
 }
+
+//======================
+//	PIPE WRENCH START
+//======================
+int g_iClub;
+
+//Only predict the miss sounds, hit sounds are still played 
+//server side, so players don't get the wrong idea.
+void EV_Showel(event_args_t *args)
+{
+	const int idx = args->entindex;
+	Vector origin = args->origin;
+	const int iBigSwing = args->bparam1;
+	const int hitSomething = args->bparam2;
+
+	if (!EV_IsLocal(idx))
+	{
+		return;
+	}
+
+	//Play Swing sound
+	if (iBigSwing)
+	{
+		if (hitSomething)
+		{
+			gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_BIG_SWING_HIT, 0);
+		}
+		else
+		{
+			gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_BIG_SWING_MISS, 0);
+		}
+
+		gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/showel_big_miss.wav", 1, ATTN_NORM, 0, PITCH_NORM);
+	}
+	else
+	{
+		if (hitSomething)
+		{
+			switch (g_iClub % 3)
+			{
+			case 0:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK1HIT, 0); break;
+			case 1:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK2HIT, 0); break;
+			case 2:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK3HIT, 0); break;
+			}
+		}
+		else
+		{
+			switch (g_iClub % 3)
+			{
+			case 0:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK1MISS, 0); break;
+			case 1:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK2MISS, 0); break;
+			case 2:
+				gEngfuncs.pEventAPI->EV_WeaponAnimation(PIPEWRENCH_ATTACK3MISS, 0); break;
+			}
+
+			switch (g_iClub % 2)
+			{
+			case 0: gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/showel_miss1.wav", 1, ATTN_NORM, 0, PITCH_NORM); break;
+			case 1: gEngfuncs.pEventAPI->EV_PlaySound(idx, origin, CHAN_WEAPON, "weapons/showel_miss2.wav", 1, ATTN_NORM, 0, PITCH_NORM); break;
+			}
+		}
+
+		++g_iClub;
+	}
+}
+//======================
+//	 PIPE WRENCH END 
+//======================
 
 void EV_TrainPitchAdjust(event_args_t* args)
 {
