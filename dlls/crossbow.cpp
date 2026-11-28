@@ -478,12 +478,12 @@ void CCrossbow::WeaponIdle()
 			if (0 != m_iClip)
 			{
 				SendWeaponAnim(CROSSBOW_FIDGET1);
-				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 90.0 / 30.0;
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
 			}
 			else
 			{
 				SendWeaponAnim(CROSSBOW_FIDGET2);
-				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 80.0 / 30.0;
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
 			}
 		}
 	}

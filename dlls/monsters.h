@@ -59,6 +59,7 @@
 #define SF_MONSTER_TURRET_STARTINACTIVE 64
 #define SF_MONSTER_TURRET_ALLY 1024
 #define SF_MONSTER_WAIT_UNTIL_PROVOKED 64 // don't attack the player unless provoked
+#define SF_MONSTER_SKELETON 4096
 
 
 
@@ -167,6 +168,7 @@ public:
 	int ObjectCaps() override { return (CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; }
 	static void SpawnHeadGib(entvars_t* pevVictim);
 	static void SpawnRandomGibs(entvars_t* pevVictim, int cGibs, bool human);
+	static void SpawnRandomGibs(entvars_t* pevVictim, int cGibs, const char* model);
 	static void SpawnStickyGibs(entvars_t* pevVictim, Vector vecOrigin, int cGibs);
 
 	int m_bloodColor;

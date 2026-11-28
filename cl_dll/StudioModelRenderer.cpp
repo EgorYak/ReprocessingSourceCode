@@ -757,6 +757,7 @@ StudioEstimateFrame
 
 ====================
 */
+extern cvar_t* cl_righthand;
 float CStudioModelRenderer::StudioEstimateFrame(mstudioseqdesc_t* pseqdesc)
 {
 	double dfdt, f;
@@ -1061,6 +1062,8 @@ void CStudioModelRenderer::StudioSetupBones()
 	}
 #endif // GATESEQ
 
+	// do mirroring just for view model
+	bool viewModel = gEngfuncs.GetViewModel() && m_pCurrentEntity == gEngfuncs.GetViewModel();
 	for (i = 0; i < m_pStudioHeader->numbones; i++)
 	{
 		const int parent = pbones[i].parent;
@@ -1073,6 +1076,20 @@ void CStudioModelRenderer::StudioSetupBones()
 
 		if (parent == -1)
 		{
+			// mirror model start
+			if (viewModel && IEngineStudio.IsHardware() && g_bRenderMirroredViewModel)
+			{
+				for (int column = 0; column < 4; ++column)
+					bonematrix[1][column] = -bonematrix[1][column];
+				// HACK - WTF Valve? WHY DO YOU BACK FACE CULING ON THIS?
+				cl_righthand->value = 1;
+			}
+			else
+			{
+				// HACK - WTF Valve? WHY DO YOU BACK FACE CULING ON THIS?
+				cl_righthand->value = 0;
+			}
+			// mirror model end
 			MatrixCopy(bonematrix, m_basetransform[i]);
 			if (0 != IEngineStudio.IsHardware())
 			{

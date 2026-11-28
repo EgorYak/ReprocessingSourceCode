@@ -606,7 +606,6 @@ void CStukaBat :: Spawn()
 	m_flFieldOfView		= VIEW_FIELD_FULL;
 	m_MonsterState		= MONSTERSTATE_NONE;
 	pev->view_ofs		= Vector(0, 0, 8);
-	m_pFlapSound	= "zombie/claw_miss1.wav";
 	
 	SetFlyingSpeed( 275 );
 	SetFlyingMomentum( 2.5 );
@@ -635,6 +634,8 @@ void CStukaBat :: Precache()
 	PRECACHE_SOUND("bullchicken/bc_spithit1.wav");
 	PRECACHE_SOUND("bullchicken/bc_spithit2.wav");
 	PRECACHE_SOUND("bullchicken/bc_attack1.wav");
+
+	m_pFlapSound = "zombie/claw_miss1.wav";
 
 	int i ;
 
@@ -673,40 +674,43 @@ void CStukaBat :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 	case STUKA_BOMB:
 	{
-		Vector	vecSpitOffset;
-		Vector	vecSpitDir;
-
-		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "bullchicken/bc_attack1.wav", 1, ATTN_NORM );
-		CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 384, 0.3 );
-
-		UTIL_MakeVectors ( pev->angles );
-
-		vecSpitOffset = pev->origin + gpGlobals->v_forward * 32.0;
-		
-		vecSpitDir = (m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs - vecSpitOffset);
-		float gravity = g_psv_gravity->value;
-		float time = vecSpitDir.Length( ) / 900;
-		vecSpitDir = vecSpitDir * (1.0 / time);
-
-		// adjust upward toss to compensate for gravity loss
-		vecSpitDir.z += gravity * time * 0.5;
-
-		CStukaBomb::Shoot( pev, vecSpitOffset, vecSpitDir );
-
-		// spew the spittle particle streams.
-		Vector vecStreamDir = gpGlobals->v_forward * 400.0 + gpGlobals->v_up * 400.0;
-		vecStreamDir.Normalize();
-
-		for ( int i = 0; i < 4; i++ )
+		if (m_hEnemy)
 		{
-			vecStreamDir.x += RANDOM_FLOAT( -0.6, 0.6 );
-			vecStreamDir.y += RANDOM_FLOAT( -0.6, 0.6 );
-			vecStreamDir.z += RANDOM_FLOAT( -0.6, 0.6 );
+			Vector	vecSpitOffset;
+			Vector	vecSpitDir;
 
-			UTIL_BloodStream( vecSpitOffset, vecStreamDir, BLOOD_COLOR_GREEN, 400 );
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "bullchicken/bc_attack1.wav", 1, ATTN_NORM);
+			CSoundEnt::InsertSound(bits_SOUND_COMBAT, pev->origin, 384, 0.3);
+
+			UTIL_MakeVectors(pev->angles);
+
+			vecSpitOffset = pev->origin + gpGlobals->v_forward * 32.0;
+
+			vecSpitDir = (m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs - vecSpitOffset);
+			float gravity = g_psv_gravity->value;
+			float time = vecSpitDir.Length() / 900;
+			vecSpitDir = vecSpitDir * (1.0 / time);
+
+			// adjust upward toss to compensate for gravity loss
+			vecSpitDir.z += gravity * time * 0.5;
+
+			CStukaBomb::Shoot(pev, vecSpitOffset, vecSpitDir);
+
+			// spew the spittle particle streams.
+			Vector vecStreamDir = gpGlobals->v_forward * 400.0 + gpGlobals->v_up * 400.0;
+			vecStreamDir.Normalize();
+
+			for (int i = 0; i < 4; i++)
+			{
+				vecStreamDir.x += RANDOM_FLOAT(-0.6, 0.6);
+				vecStreamDir.y += RANDOM_FLOAT(-0.6, 0.6);
+				vecStreamDir.z += RANDOM_FLOAT(-0.6, 0.6);
+
+				UTIL_BloodStream(vecSpitOffset, vecStreamDir, BLOOD_COLOR_GREEN, 5);
+			}
+
+			m_flNextBomb = gpGlobals->time + RANDOM_FLOAT(5, 10);
 		}
-
-		m_flNextBomb = gpGlobals->time + RANDOM_FLOAT(5,10);
 	}
 	break;
 
@@ -1427,9 +1431,10 @@ Schedule_t *CStukaBat :: GetSchedule ( void )
 
 						ALERT ( at_aiconsole, "Stukabat: Dive check\n" );
 
-						vecToEnemy = (m_hEnemy->pev->origin - pev->origin).Normalize();
+						vecToEnemy = (m_hEnemy->pev->origin - pev->origin);
+						UTIL_MakeVectors(vecToEnemy);
 
-						if ( vecToEnemy.Length() > 512.0 && DotProduct( vecToEnemy, gpGlobals->v_forward.Normalize() ) > 0 )
+						if ( vecToEnemy.Length() > 512.0 && DotProduct( vecToEnemy, gpGlobals->v_forward ) > 0 )
 						{
 							CBaseEntity* pEntity;
 

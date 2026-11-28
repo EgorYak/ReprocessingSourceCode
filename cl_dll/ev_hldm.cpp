@@ -1614,6 +1614,8 @@ void EV_EgonStop(event_args_t* args)
 //	    EGON END
 //======================
 
+extern cvar_t* cl_righthand;
+
 //======================
 //	   HORNET START
 //======================
@@ -1654,9 +1656,16 @@ void EV_HornetGunFire(event_args_t* args)
 			V_PunchAxis(0, gEngfuncs.pfnRandomFloat(-4, 4));
 	}
 
-	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4);
+	EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 12, -12, 4);
 
 	EV_EjectBrass(ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL);
+
+	// for mirrored model
+	if (cl_righthand->value)
+	{
+		EV_GetDefaultShellInfo(args, origin, velocity, ShellVelocity, ShellOrigin, forward, -right, up, 12, -12, 4);
+		EV_EjectBrass(ShellOrigin, ShellVelocity, angles[YAW], shell, TE_BOUNCE_SHELL);
+	}
 
 	switch (gEngfuncs.pfnRandomLong(0, 2))
 	{
@@ -1825,6 +1834,7 @@ void EV_Showel(event_args_t *args)
 	{
 		return;
 	}
+	V_PunchAxis(0, -0.4);
 
 	//Play Swing sound
 	if (iBigSwing)

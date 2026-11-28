@@ -94,7 +94,7 @@ void CSniperRifle::WeaponIdle()
 
 	ResetEmptySound();
 
-	if( m_bReloading && gpGlobals->time >= m_flReloadStart + 2.324 )
+	if( m_bReloading && gpGlobals->time >= m_flReloadStart + 1.6 )
 	{
 		SendWeaponAnim( SNIPERRIFLE_RELOAD2 );
 		m_bReloading = false;
@@ -107,7 +107,7 @@ void CSniperRifle::WeaponIdle()
 		else
 			SendWeaponAnim( SNIPERRIFLE_SLOWIDLE2 );
 
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 4.348;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.05;
 	}
 }
 
@@ -212,7 +212,7 @@ void CSniperRifle::Reload()
 		}
 	}
 
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 4.102;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.392;
 }
 
 int CSniperRifle::iItemSlot()

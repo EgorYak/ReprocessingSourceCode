@@ -357,6 +357,61 @@ void CGib::SpawnRandomGibs(entvars_t* pevVictim, int cGibs, bool human)
 	}
 }
 
+void CGib::SpawnRandomGibs(entvars_t* pevVictim, int cGibs, const char* model)
+{
+	int cSplat;
+
+	for (cSplat = 0; cSplat < cGibs; cSplat++)
+	{
+		CGib* pGib = GetClassPtr((CGib*)NULL);
+
+		// human pieces
+		pGib->Spawn(model);
+		pGib->pev->body = cSplat;
+
+		if (pevVictim)
+		{
+			// spawn the gib somewhere in the monster's bounding volume
+			pGib->pev->origin.x = pevVictim->absmin.x + pevVictim->size.x * (RANDOM_FLOAT(0, 1));
+			pGib->pev->origin.y = pevVictim->absmin.y + pevVictim->size.y * (RANDOM_FLOAT(0, 1));
+			pGib->pev->origin.z = pevVictim->absmin.z + pevVictim->size.z * (RANDOM_FLOAT(0, 1)) + 1; // absmin.z is in the floor because the engine subtracts 1 to enlarge the box
+
+			// make the gib fly away from the attack vector
+			pGib->pev->velocity = g_vecAttackDir * -1;
+
+			// mix in some noise
+			pGib->pev->velocity.x += RANDOM_FLOAT(-0.25, 0.25);
+			pGib->pev->velocity.y += RANDOM_FLOAT(-0.25, 0.25);
+			pGib->pev->velocity.z += RANDOM_FLOAT(-0.25, 0.25);
+
+			pGib->pev->velocity = pGib->pev->velocity * RANDOM_FLOAT(300, 400);
+
+			pGib->pev->avelocity.x = RANDOM_FLOAT(100, 200);
+			pGib->pev->avelocity.y = RANDOM_FLOAT(100, 300);
+
+			// copy owner's blood color
+			pGib->m_bloodColor = (CBaseEntity::Instance(pevVictim))->BloodColor();
+
+			if (pevVictim->health > -50)
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 0.7;
+			}
+			else if (pevVictim->health > -200)
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 2;
+			}
+			else
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 4;
+			}
+
+			pGib->pev->solid = SOLID_BBOX;
+			UTIL_SetSize(pGib->pev, Vector(0, 0, 0), Vector(0, 0, 0));
+		}
+		pGib->LimitVelocity();
+	}
+}
+
 
 bool CBaseMonster::HasHumanGibs()
 {

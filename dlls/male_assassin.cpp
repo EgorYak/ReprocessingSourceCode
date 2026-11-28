@@ -342,17 +342,15 @@ void CMOFAssassin :: GibMonster ()
 			pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
 			pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
 		}
-		/*
 		if (FBitSet( pev->weapons, MAssassinWeaponFlag::GrenadeLauncher ))
 		{
-			pGun = DropItem( "weapon_handgrenade", vecGunPos, vecGunAngles );
+			pGun = DropItem( "weapon_ciagrenade", vecGunPos, vecGunAngles );
 			if ( pGun )
 			{
 				pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
 				pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
 			}
 		}
-		*/
 	}
 
 	CBaseMonster :: GibMonster();
@@ -942,12 +940,10 @@ void CMOFAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				 DropItem( "weapon_crossbow", vecGunPos, vecGunAngles );
 			}
-			/*
 			if (FBitSet( pev->weapons, MAssassinWeaponFlag::GrenadeLauncher ))
 			{
-				DropItem( "weapon_handgrenade", vecGunPos, vecGunAngles );
+				DropItem( "weapon_ciagrenade", vecGunPos, vecGunAngles );
 			}
-			*/
 
 			}
 			break;
@@ -962,7 +958,13 @@ void CMOFAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			UTIL_MakeVectors( pev->angles );
 			// CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 34 + Vector (0, 0, 32), m_vecTossVelocity, 3.5 );
-			CGrenade::ShootTimed( pev, GetGunPosition(), m_vecTossVelocity, 3.5 );
+			if (FBitSet(pev->weapons, MAssassinWeaponFlag::GrenadeLauncher))
+			{
+				CGrenade *gren = CGrenade::ShootContact(pev, GetGunPosition(), m_vecTossVelocity);
+				SET_MODEL(ENT(gren->pev), "models/w_ciagrenade.mdl");
+			}
+			else
+				CGrenade::ShootTimed(pev, GetGunPosition(), m_vecTossVelocity, 3.5);
 
 			m_fThrowGrenade = false;
 			m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
@@ -972,8 +974,8 @@ void CMOFAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case MASSASSIN_AE_GREN_LAUNCH:
 		{
-			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/glauncher.wav", 0.8, ATTN_NORM);
-			CGrenade::ShootContact( pev, GetGunPosition(), m_vecTossVelocity );
+			CGrenade *gren = CGrenade::ShootContact( pev, GetGunPosition(), m_vecTossVelocity );
+			SET_MODEL(ENT(gren->pev), "models/w_ciagrenade.mdl");
 			m_fThrowGrenade = false;
 			if (g_iSkillLevel >= SKILL_MEDIUM)
 				m_flNextGrenadeCheck = gpGlobals->time + RANDOM_FLOAT( 2, 5 );// wait a random amount of time before shooting again

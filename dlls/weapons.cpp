@@ -331,7 +331,7 @@ void W_Precache()
 	UTIL_PrecacheOther("ammo_crossbow");
 
 	// egon
-	UTIL_PrecacheOtherWeapon("weapon_egon");
+	//UTIL_PrecacheOtherWeapon("weapon_egon");
 
 	// tripmine
 	UTIL_PrecacheOtherWeapon("weapon_tripmine");
@@ -341,6 +341,9 @@ void W_Precache()
 
 	// hand grenade
 	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
+
+	// cia grenade
+	UTIL_PrecacheOtherWeapon("weapon_ciagrenade");
 
 	// squeak grenade
 	UTIL_PrecacheOtherWeapon("weapon_snark");

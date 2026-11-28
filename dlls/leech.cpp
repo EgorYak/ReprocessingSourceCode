@@ -725,14 +725,14 @@ public:
 	void Precache() override;
 
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
-
+	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	int BloodColor() override { return m_bloodColor; }
 
 	void Touch(CBaseEntity* pOther) override
 	{
 		if (pOther->IsPlayer())
 		{
-			pOther->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_POISON);
+			//pOther->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_POISON);
 			// If the client is pushing me, give me some base velocity
 			if (gpGlobals->trace_ent && gpGlobals->trace_ent == edict())
 			{
@@ -750,6 +750,38 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS(monster_smlsquid, CSmlSquid);
+
+void CSmlSquid::HandleAnimEvent(MonsterEvent_t* pEvent)
+{
+	switch (pEvent->event)
+	{
+	case LEECH_AE_ATTACK:
+		AttackSound();
+		CBaseEntity* pEnemy;
+
+		pEnemy = m_hEnemy;
+		if (pEnemy != NULL)
+		{
+			Vector dir, face;
+
+			UTIL_MakeVectorsPrivate(pev->angles, face, NULL, NULL);
+			face.z = 0;
+			dir = (pEnemy->pev->origin - pev->origin);
+			dir.z = 0;
+			dir = dir.Normalize();
+			face = face.Normalize();
+
+
+			if (DotProduct(dir, face) > 0.9) // Only take damage if the leech is facing the prey
+				pEnemy->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_POISON);
+		}
+		break;
+
+	default:
+		CBaseMonster::HandleAnimEvent(pEvent);
+		break;
+	}
+}
 
 void CSmlSquid::Spawn()
 {
@@ -806,7 +838,7 @@ public:
 	{
 		if (pOther->IsPlayer())
 		{
-			pOther->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_GENERIC);
+			//pOther->TakeDamage(pev, pev, gSkillData.leechDmgBite, DMG_GENERIC);
 			// If the client is pushing me, give me some base velocity
 			if (gpGlobals->trace_ent && gpGlobals->trace_ent == edict())
 			{

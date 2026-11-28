@@ -76,10 +76,10 @@ bool CGlock::GetItemInfo(ItemInfo* p)
 bool CGlock::Deploy()
 {
 	// pev->body = 1;
-	if (!m_pPlayer->m_bIsDLC)
+	//if (!m_pPlayer->m_bIsDLC)
 		return DefaultDeploy("models/v_9mmhandgun.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded");
-	else
-		return DefaultDeploy("models/v_9mmhandgun_DLC.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded");
+	//else
+	//	return DefaultDeploy("models/v_9mmhandgun_DLC.mdl", "models/p_9mmhandgun.mdl", GLOCK_DRAW, "onehanded");
 }
 
 void CGlock::SecondaryAttack()
@@ -202,17 +202,17 @@ void CGlock::WeaponIdle()
 		if (flRand <= 0.3 + 0 * 0.75)
 		{
 			iAnim = GLOCK_IDLE3;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 49.0 / 16;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 4.5;
 		}
 		else if (flRand <= 0.6 + 0 * 0.875)
 		{
 			iAnim = GLOCK_IDLE1;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 60.0 / 16.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.5;
 		}
 		else
 		{
 			iAnim = GLOCK_IDLE2;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 40.0 / 16.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.5;
 		}
 		SendWeaponAnim(iAnim);
 	}

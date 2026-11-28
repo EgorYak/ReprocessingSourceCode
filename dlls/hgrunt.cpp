@@ -2827,6 +2827,7 @@ public:
 	void DeathSound() override;
 	void PainSound() override;
 	void IdleSound() override;
+	void Killed(entvars_t* pevAttacker, int iGib) override;
 	int Classify() { return CLASS_ALIEN_MILITARY; };
 	void HandleAnimEvent(MonsterEvent_t* pEvent) override;
 	void GibMonster() override;
@@ -2835,6 +2836,18 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS(monster_nam_grunt, CNamGrunt);
+
+void CNamGrunt::Killed(entvars_t* pevAttacker, int iGib)
+{
+	if (pev->spawnflags & SF_MONSTER_SKELETON)
+	{
+		CBaseEntity* pNew = Create("monster_alien_slave", pev->origin, pev->angles);
+		CBaseMonster* pNewMonster = pNew->MyMonsterPointer();
+		pNewMonster->pev->body = 1;
+		iGib = GIB_ALWAYS;
+	}
+	CSquadMonster::Killed(pevAttacker, iGib);
+}
 
 //=========================================================
 // Spawn
@@ -2909,6 +2922,11 @@ void CNamGrunt::Spawn()
 //=========================================================
 void CNamGrunt::Precache()
 {
+	if (pev->spawnflags & SF_MONSTER_SKELETON)
+	{
+		PRECACHE_MODEL("models/bonegibs.mdl");
+		UTIL_PrecacheOther("monster_alien_slave");
+	}
 	if (pev->model)
 		PRECACHE_MODEL((char*)STRING(pev->model));
 	else
@@ -3190,7 +3208,7 @@ void CNamGrunt::GibMonster()
 	CBaseMonster::GibMonster();
 }
 
-class CVCGrunt : public CHGrunt
+class CVCGrunt : public CNamGrunt
 {
 public:
 	void Spawn() override;
@@ -3280,6 +3298,11 @@ void CVCGrunt::Spawn()
 //=========================================================
 void CVCGrunt::Precache()
 {
+	if (pev->spawnflags & SF_MONSTER_SKELETON)
+	{
+		PRECACHE_MODEL("models/bonegibs.mdl");
+		UTIL_PrecacheOther("monster_alien_slave");
+	}
 	if (pev->model)
 		PRECACHE_MODEL((char*)STRING(pev->model));
 	else

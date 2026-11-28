@@ -947,7 +947,7 @@ void CShockTrooper :: GibMonster ()
 
 	if( CVAR_GET_FLOAT( "violence_agibs" ) != 0 )	// Should never get here, but someone might call it directly
 	{
-		CGib::SpawnRandomGibs( pev, 6, 0 );	// Throw alien gibs
+		CGib::SpawnRandomGibs( pev, 6, false );	// Throw alien gibs
 	}
 
 	CSquadMonster::GibMonster();

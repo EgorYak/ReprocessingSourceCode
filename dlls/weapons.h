@@ -1368,6 +1368,30 @@ public:
 	}
 };
 
+class CCIAGrenade : public CHandGrenade
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	int iItemSlot() override { return 5; }
+	bool GetItemInfo(ItemInfo* p) override;
+
+	void PrimaryAttack() override;
+	bool Deploy() override;
+	bool CanHolster() override;
+	void Holster() override;
+	void WeaponIdle() override;
+
+	bool UseDecrement() override
+	{
+#if defined(CLIENT_WEAPONS)
+		return true;
+#else
+		return false;
+#endif
+	}
+};
+
 enum satchel_e
 {
 	SATCHEL_IDLE1 = 0,

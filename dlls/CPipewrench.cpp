@@ -475,17 +475,17 @@ void CShowel::WeaponIdle()
 		if (flRand <= 0.5)
 		{
 			iAnim = PIPEWRENCH_IDLE3;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.03;
 		}
 		else if (flRand <= 0.9)
 		{
 			iAnim = PIPEWRENCH_IDLE1;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.03;
 		}
 		else
 		{
 			iAnim = PIPEWRENCH_IDLE2;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.03;
 		}
 
 		SendWeaponAnim( iAnim );

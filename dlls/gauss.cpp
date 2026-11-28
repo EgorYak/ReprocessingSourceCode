@@ -71,8 +71,8 @@ void CGauss::Precache()
 	PRECACHE_SOUND("ambience/pulsemachine.wav");
 
 	m_iGlow = PRECACHE_MODEL("sprites/hotglow.spr");
-	m_iBalls = PRECACHE_MODEL("sprites/hotglow.spr");
-	m_iBeam = PRECACHE_MODEL("sprites/smoke.spr");
+	m_iBalls = PRECACHE_MODEL("sprites/XSpark1.spr");
+	m_iBeam = PRECACHE_MODEL("sprites/xbeam1.spr");
 
 	m_usGaussFire = PRECACHE_EVENT(1, "events/gauss.sc");
 	m_usGaussSpin = PRECACHE_EVENT(1, "events/gaussspin.sc");
@@ -580,7 +580,7 @@ void CGauss::WeaponIdle()
 		else
 		{
 			iAnim = GAUSS_FIDGET;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.4;
 		}
 
 		return;

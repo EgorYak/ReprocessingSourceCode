@@ -191,6 +191,8 @@ public:
 
 	static TYPEDESCRIPTION m_SaveData[];
 
+	void Killed(entvars_t* pevAttacker, int iGib) override;
+
 	void Spawn() override;
 	void Precache() override;
 	void SetYawSpeed() override;
@@ -242,6 +244,18 @@ TYPEDESCRIPTION	CNamCharlie::m_SaveData[] =
 IMPLEMENT_SAVERESTORE( CNamCharlie, CBaseMonster );
 
 LINK_ENTITY_TO_CLASS( monster_nam_charlie, CNamCharlie );
+
+void CNamCharlie::Killed(entvars_t* pevAttacker, int iGib)
+{
+	if (pev->spawnflags & SF_MONSTER_SKELETON)
+	{
+		CBaseEntity* pNew = Create("monster_alien_slave", pev->origin, pev->angles);
+		CBaseMonster* pNewMonster = pNew->MyMonsterPointer();
+		pNewMonster->pev->body = 1;
+		iGib = GIB_ALWAYS;
+	}
+	CBaseMonster::Killed(pevAttacker, iGib);
+}
 
 const char *CNamCharlie::pAttackHitSounds[] = 
 {
@@ -610,6 +624,11 @@ void CNamCharlie :: Spawn()
 //=========================================================
 void CNamCharlie :: Precache()
 {
+	if (pev->spawnflags & SF_MONSTER_SKELETON)
+	{
+		PRECACHE_MODEL("models/bonegibs.mdl");
+		UTIL_PrecacheOther("monster_alien_slave");
+	}
 	int i;
 
 	PRECACHE_MODEL("models/charlie.mdl");

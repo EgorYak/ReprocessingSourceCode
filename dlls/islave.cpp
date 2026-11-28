@@ -61,6 +61,7 @@ public:
 	void IdleSound() override;
 
 	void Killed(entvars_t* pevAttacker, int iGib) override;
+	void GibMonster() override;
 
 	void StartTask(Task_t* pTask) override;
 	void PrescheduleThink(void);
@@ -283,7 +284,56 @@ int CISlave::ISoundMask()
 void CISlave::Killed(entvars_t* pevAttacker, int iGib)
 {
 	ClearBeams();
+	if (pev->body == 1)
+	{
+		iGib = GIB_ALWAYS;
+		pev->sequence = 0;
+		pev->frame = 0;
+	}
 	CSquadMonster::Killed(pevAttacker, iGib);
+}
+
+//=========================================================
+// GibMonster - create some gore and get rid of a monster's
+// model.
+//=========================================================
+void CISlave::GibMonster()
+{
+	if (pev->body != 1)
+	{
+		CBaseMonster::GibMonster();
+		return;
+	}
+	if (m_iszGibTrigger && STRING(m_iszGibTrigger)[0] != '\0')
+	{
+		ALERT(at_aiconsole, "Gib Trigger Fire Target\n");
+		FireTargets(STRING(m_iszGibTrigger), this, this, USE_TOGGLE, 0);
+	}
+	TraceResult tr;
+
+	Vector center = pev->origin;
+	center.z = center.z + (UTIL_GetModelHeight(pev));
+
+	SpawnBlood(center, BLOOD_COLOR_RED, UTIL_GetModelMaxDim(pev));
+
+	center = pev->origin;
+	center.z = center.z + (UTIL_GetModelHeight(pev) / 2);
+
+	SpawnBlood(center, BLOOD_COLOR_RED, UTIL_GetModelMaxDim(pev) * 2);
+
+	center = pev->origin;
+
+	SpawnBlood(center, BLOOD_COLOR_RED, UTIL_GetModelMaxDim(pev));
+
+	bool gibbed = false;
+
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/cbar_hitbod1.wav", 1, ATTN_NORM);
+
+	if (CVAR_GET_FLOAT("violence_agibs") != 0) // Should never get here, but someone might call it directly
+	{
+		CGib::SpawnRandomGibs(pev, 5, "models/bonegibs.mdl");
+	}
+	gibbed = true;
 }
 
 //=========================================================
@@ -594,6 +644,12 @@ void CISlave::Spawn()
 
 	m_voicePitch = RANDOM_LONG(85, 110);
 
+	if (pev->body == 1)
+	{
+		m_bloodColor = DONT_BLEED;
+		m_voicePitch = RANDOM_LONG(55, 70);
+	}
+
 	MonsterInit();
 }
 
@@ -616,6 +672,11 @@ void CISlave::Precache()
 	PRECACHE_SOUND_ARRAY(pAttackMissSounds);
 	PRECACHE_SOUND_ARRAY(pPainSounds);
 	PRECACHE_SOUND_ARRAY(pDeathSounds);
+
+	if (pev->body == 1)
+	{
+		PRECACHE_MODEL("models/bonegibs.mdl");
+	}
 
 	UTIL_PrecacheOther("test_effect");
 }

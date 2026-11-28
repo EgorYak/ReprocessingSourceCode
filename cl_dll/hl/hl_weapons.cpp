@@ -69,6 +69,7 @@ CM16 g_M16;
 CRevolver g_Revolver;
 CSniperRifle g_SniperRifle;
 CShowel g_Showel;
+CCIAGrenade g_CIAGren;
 
 
 /*
@@ -610,6 +611,10 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 
 	case WEAPON_SHOWEL:
 		pWeapon = &g_Showel;
+		break;
+
+	case WEAPON_CIAGRENADE:
+		pWeapon = &g_CIAGren;
 		break;
 	}
 

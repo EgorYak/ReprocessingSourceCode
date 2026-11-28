@@ -363,17 +363,17 @@ void CShotgun::WeaponIdle()
 			if (flRand <= 0.8)
 			{
 				iAnim = SHOTGUN_IDLE_DEEP;
-				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + (60.0 / 12.0); // * RANDOM_LONG(2, 5);
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3.0; // * RANDOM_LONG(2, 5);
 			}
 			else if (flRand <= 0.95)
 			{
 				iAnim = SHOTGUN_IDLE;
-				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + (20.0 / 9.0);
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
 			}
 			else
 			{
 				iAnim = SHOTGUN_IDLE4;
-				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + (20.0 / 9.0);
+				m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.34;
 			}
 			SendWeaponAnim(iAnim);
 		}

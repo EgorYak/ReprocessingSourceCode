@@ -199,6 +199,7 @@ public:
 	void PainSound() override;
 	void DeathSound() override;
 	void AlertSound() override;
+	Vector SpitAtEnemy(const Vector& vecSpitOrigin, float dirRandomDeviation, float *distance);
 	void AttackSound();
 	void StartTask(Task_t* pTask) override;
 	void RunTask(Task_t* pTask) override;
@@ -531,6 +532,30 @@ void CBullsquid::SetYawSpeed()
 	pev->yaw_speed = ys;
 }
 
+Vector CBullsquid::SpitAtEnemy(const Vector& vecSpitOrigin, float dirRandomDeviation, float *distance)
+{
+	Vector vecEnemyPosition;
+	if (m_pCine && m_hTargetEnt != 0) // LRC- are we being told to do this by a scripted_action?
+		vecEnemyPosition = m_hTargetEnt->pev->origin;
+	else if (m_hEnemy != 0)
+		vecEnemyPosition = m_hEnemy->BodyTarget(pev->origin);
+	else
+		vecEnemyPosition = m_vecEnemyLKP;
+	const Vector vecDiff = (vecEnemyPosition - vecSpitOrigin);
+	if (distance)
+	{
+		*distance = vecDiff.Length();
+	}
+	Vector vecSpitDir = vecDiff.Normalize();
+	if (dirRandomDeviation > 0)
+	{
+		vecSpitDir.x += RANDOM_FLOAT( -dirRandomDeviation, dirRandomDeviation );
+		vecSpitDir.y += RANDOM_FLOAT( -dirRandomDeviation, dirRandomDeviation );
+		vecSpitDir.z += RANDOM_FLOAT( -dirRandomDeviation, 0.0f );
+	}
+	return vecSpitDir;
+}
+
 //=========================================================
 // HandleAnimEvent - catches the monster-specific messages
 // that occur when tagged animation frames are played.
@@ -552,6 +577,10 @@ void CBullsquid::HandleAnimEvent(MonsterEvent_t* pEvent)
 			// we should be able to read the position of bones at runtime for this info.
 			vecSpitOffset = (gpGlobals->v_right * 8 + gpGlobals->v_forward * 37 + gpGlobals->v_up * 23);
 			vecSpitOffset = (pev->origin + vecSpitOffset);
+			Vector vecSpitOrigin = (pev->origin + vecSpitOffset);
+			float dirRandomDeviation = 5 * 0.01f;
+			float distanceToEnemy;
+			//vecSpitDir = SpitAtEnemy(vecSpitOrigin, dirRandomDeviation, &distanceToEnemy);
 			vecSpitDir = ((m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs) - vecSpitOffset).Normalize();
 
 			vecSpitDir.x += RANDOM_FLOAT(-0.05, 0.05);

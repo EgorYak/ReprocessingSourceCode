@@ -1404,7 +1404,7 @@ void COFVoltigore::GibMonster()
 	if( CVAR_GET_FLOAT( "violence_agibs" ) != 0 )	// Should never get here, but someone might call it directly
 	{
 		//Gib spawning has been rewritten so the logic for limiting gib submodels is generalized
-		CGib::SpawnRandomGibs( pev, 12, 0 );	// Throw alien gibs
+		CGib::SpawnRandomGibs( pev, 12, false );	// Throw alien gibs
 	}
 	CSquadMonster::GibMonster();
 }

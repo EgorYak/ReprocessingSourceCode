@@ -3681,12 +3681,14 @@ void CBasePlayer::CheatImpulseCommands(int iImpulse)
 		GiveNamedItem("ammo_m16");
 		GiveNamedItem("ammo_ARgrenades");
 		GiveNamedItem("weapon_handgrenade");
+		GiveNamedItem("weapon_ciagrenade");
 		GiveNamedItem("weapon_tripmine");
 		GiveNamedItem("weapon_357");
+		GiveNamedItem("weapon_python");
 		GiveNamedItem("ammo_357");
 		GiveNamedItem("weapon_crossbow");
 		GiveNamedItem("ammo_crossbow");
-		GiveNamedItem("weapon_egon");
+		//GiveNamedItem("weapon_egon");
 		GiveNamedItem("weapon_gauss");
 		GiveNamedItem("ammo_gaussclip");
 		GiveNamedItem("weapon_rpg");

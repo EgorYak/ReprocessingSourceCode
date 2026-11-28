@@ -254,6 +254,9 @@ public:
 
 	//Vector			m_vAttachAngles[4];	// attach angels
 
+	// mirror model polys
+	bool g_bRenderMirroredViewModel = false;
+
 	//RENDERERS START
 	/*
 public:

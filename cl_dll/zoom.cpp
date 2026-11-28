@@ -81,6 +81,12 @@ bool CHudZoom::Draw(float flTime)
 	float centery = ScreenHeight / 2;
 
 
+	int x = ScreenWidth / 2;
+	int y = ScreenHeight / 2;
+
+	int size = 70;
+	int thickness = 2;
+
 	gEngfuncs.pTriAPI->SpriteTexture((struct model_s *)gEngfuncs.GetSpritePointer(m_hTop_Left), 0);
 	gEngfuncs.pTriAPI->Begin(TRI_QUADS);
 	DrawQuad(left, 0, centerx, centery);
@@ -110,6 +116,24 @@ bool CHudZoom::Draw(float flTime)
 	gEngfuncs.pTriAPI->Begin(TRI_QUADS);
 	DrawQuad((right - 1), 0, ScreenWidth, ScreenHeight);
 	gEngfuncs.pTriAPI->End();
+
+	// Горизонтальная линия
+	gEngfuncs.pfnFillRGBA(
+		x - size / 2,
+		y - thickness / 2,
+		size,
+		thickness,
+		100, 0, 0, 255
+	);
+
+	// Вертикальная линия
+	gEngfuncs.pfnFillRGBA(
+		x - thickness / 2,
+		y - size / 2,
+		thickness,
+		size,
+		100, 0, 0, 255
+	);
 
 	return 1;
 }

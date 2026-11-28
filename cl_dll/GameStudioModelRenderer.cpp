@@ -334,6 +334,25 @@ void CGameStudioModelRenderer::StudioRenderModel()
 	// Draw the original studio model first.
 	CStudioModelRenderer::StudioRenderModel();
 
+	// Mirror M60 model in hallucinations
+	// Mirrored pass.
+	if (m_pCurrentEntity && m_pCurrentEntity->model &&
+		!strcmp(m_pCurrentEntity->model->name, "models/v_nam_m60.mdl") &&
+		gEngfuncs.GetViewModel() && m_pCurrentEntity == gEngfuncs.GetViewModel())
+	{
+		g_bRenderMirroredViewModel = true;
+		CStudioModelRenderer::StudioSetupBones();
+
+		// Recalculate attachments using mirrored bone transforms.
+		CStudioModelRenderer::StudioCalcAttachments();
+
+		// Process events for the mirrored pass.
+		IEngineStudio.StudioClientEvents();
+
+		CStudioModelRenderer::StudioRenderModel();
+		g_bRenderMirroredViewModel = false;
+	}
+
 	// Draw additional burn sprites over the model.
 	StudioDrawBurnSprites();
 }

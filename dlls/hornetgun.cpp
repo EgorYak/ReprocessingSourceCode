@@ -271,17 +271,17 @@ void CHgun::WeaponIdle()
 	if (flRand <= 0.75)
 	{
 		iAnim = HGUN_IDLE1;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 30.0 / 16 * (2);
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 6;
 	}
 	else if (flRand <= 0.875)
 	{
 		iAnim = HGUN_FIDGETSWAY;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 40.0 / 16.0;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 3;
 	}
 	else
 	{
 		iAnim = HGUN_FIDGETSHAKE;
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 35.0 / 16.0;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 60;
 	}
 	SendWeaponAnim(iAnim);
 }
