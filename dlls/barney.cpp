@@ -44,6 +44,7 @@
 #define HEAD_TED 1
 #define HEAD_CJ 2
 #define HEAD_OLD 3
+#define HEAD_SHOT 4
 #define BARNEY_GUN_GROUP 2
 #define BARNEY_BODY_GUNHOLSTERED 0
 #define BARNEY_BODY_GUNDRAWN 1
@@ -91,6 +92,9 @@ public:
 	float m_checkAttackTime;
 	bool m_lastAttackCheck;
 
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
+
 	// UNDONE: What is this for?  It isn't used?
 	float m_flPlayerDamage; // how much pain has the player inflicted on me?
 
@@ -106,6 +110,7 @@ TYPEDESCRIPTION CBarney::m_SaveData[] =
 		DEFINE_FIELD(CBarney, m_checkAttackTime, FIELD_TIME),
 		DEFINE_FIELD(CBarney, m_lastAttackCheck, FIELD_BOOLEAN),
 		DEFINE_FIELD(CBarney, m_flPlayerDamage, FIELD_FLOAT),
+		DEFINE_FIELD(CBarney, m_iBuckshotInHead, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CBarney, CTalkMonster);
@@ -467,6 +472,9 @@ void CBarney::Precache()
 	PRECACHE_SOUND("barney/ba_die2.wav");
 	PRECACHE_SOUND("barney/ba_die3.wav");
 
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
+
 	// every new barney must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
 	TalkInit();
@@ -511,6 +519,28 @@ void CBarney::TalkInit()
 
 bool CBarney::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
+	if ((!strcmp(STRING(pev->model), "models/barney.mdl") || !strcmp(STRING(pev->model), "models/agent.mdl")) && !m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->health = -flDamage;
+		if (!strcmp(STRING(pev->model), "models/barney.mdl"))
+			SetBodygroup(BARNEY_HEAD_GROUP, HEAD_SHOT);
+		else
+			pev->body += 4;
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
 	if (FBitSet(pev->spawnflags, SF_BARNEY_NODAMAGE))
 	{
 		flDamage = 0;
@@ -624,6 +654,38 @@ void CBarney::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir,
 		// always a head shot
 		ptr->iHitgroup = HITGROUP_HEAD;
 		break;
+	}
+	if ( (!strcmp(STRING(pev->model), "models/barney.mdl") || !strcmp(STRING(pev->model), "models/agent.mdl"))  && ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			pev->health = -flDamage;
+			if (!strcmp(STRING(pev->model), "models/barney.mdl"))
+				SetBodygroup(BARNEY_HEAD_GROUP, HEAD_SHOT);
+			else
+				pev->body += 4;
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
 	}
 
 	CTalkMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
@@ -1040,6 +1102,9 @@ void CEvilBarney::Precache()
 	PRECACHE_SOUND("evilguards/die3.wav");
 	PRECACHE_SOUND("evilguards/die4.wav");
 
+	PRECACHE_SOUND("hit/nohead_death1.wav");
+	PRECACHE_SOUND("hit/nohead_death2.wav");
+
 	// every new barney must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
 	TalkInit();
@@ -1238,6 +1303,28 @@ void CEvilBarney::Killed(entvars_t* pevAttacker, int iGib)
 
 bool CEvilBarney::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
+	if ((!strcmp(STRING(pev->model), "models/barney.mdl") || !strcmp(STRING(pev->model), "models/agent.mdl")) && !m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->health = -flDamage;
+		if (!strcmp(STRING(pev->model), "models/barney.mdl"))
+			SetBodygroup(BARNEY_HEAD_GROUP, HEAD_SHOT);
+		else
+			pev->body += 4;
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
 	// make sure friends talk about it if player hurts talkmonsters...
 	bool ret = CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 

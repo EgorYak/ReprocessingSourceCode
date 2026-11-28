@@ -26,6 +26,7 @@
 #include "scripted.h"
 #include "animation.h"
 #include "soundent.h"
+#include "weapons.h"
 
 
 #define NUM_SCIENTIST_HEADS 4 // four heads available for scientist model
@@ -81,6 +82,7 @@ public:
 	void RunTask(Task_t* pTask) override;
 	void StartTask(Task_t* pTask) override;
 	int ObjectCaps() override { return CTalkMonster::ObjectCaps() | FCAP_IMPULSE_USE; }
+	void TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType) override;
 	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 	int FriendNumber(int arrayNumber) override;
 	void SetActivity(Activity newActivity) override;
@@ -114,6 +116,8 @@ public:
 	CUSTOM_SCHEDULES;
 
 private:
+	int m_iBuckshotInHead;
+	Vector m_vecHeadPos;
 	float m_painTime;
 	float m_healTime;
 	float m_fearTime;
@@ -126,6 +130,7 @@ TYPEDESCRIPTION CScientist::m_SaveData[] =
 		DEFINE_FIELD(CScientist, m_painTime, FIELD_TIME),
 		DEFINE_FIELD(CScientist, m_healTime, FIELD_TIME),
 		DEFINE_FIELD(CScientist, m_fearTime, FIELD_TIME),
+		DEFINE_FIELD(CScientist, m_iBuckshotInHead, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CScientist, CTalkMonster);
@@ -625,13 +630,19 @@ void CScientist::HandleAnimEvent(MonsterEvent_t* pEvent)
 	case SCIENTIST_AE_NEEDLEON:
 	{
 		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 1;
+		if (!strcmp(STRING(pev->model), "models/scientist.mdl"))
+			pev->body = (oldBody % ((NUM_SCIENTIST_HEADS * 2) + 1)) + ((NUM_SCIENTIST_HEADS * 2) + 1) * 1;
+		else
+			pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 1;
 	}
 	break;
 	case SCIENTIST_AE_NEEDLEOFF:
 	{
 		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 0;
+		if (!strcmp(STRING(pev->model), "models/scientist.mdl"))
+			pev->body = (oldBody % ((NUM_SCIENTIST_HEADS * 2) + 1));
+		else
+			pev->body = (oldBody % NUM_SCIENTIST_HEADS);
 	}
 	break;
 
@@ -758,8 +769,70 @@ void CScientist::TalkInit()
 	}
 }
 
+//=========================================================
+// TraceAttack - make sure we're not taking it in the helmet
+//=========================================================
+void CScientist::TraceAttack(entvars_t* pevAttacker, float flDamage, Vector vecDir, TraceResult* ptr, int bitsDamageType)
+{
+	if ((!strcmp(STRING(pev->model), "models/scientist.mdl") || !strcmp(STRING(pev->model), "models/xlabsci.mdl")) && ptr->iHitgroup == 1)
+	{
+		if (m_bHeadshot)
+			return;
+		if ((bitsDamageType & DMG_BULLET) && flDamage == gSkillData.plrDmgBuckshot)
+			m_iBuckshotInHead++;
+
+		m_vecHeadPos = ptr->vecEndPos;
+
+		if (pev->health <= flDamage * gSkillData.monHead && flDamage >= 10 && !m_bHeadshot)
+		{
+			pev->health = -flDamage;
+			if (!strcmp(STRING(pev->model), "models/scientist.mdl"))
+				pev->body = NUM_SCIENTIST_HEADS * 2;
+			else
+				pev->body = NUM_SCIENTIST_HEADS;
+
+			switch (RANDOM_LONG(0, 1))
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+				break;
+			}
+
+			m_bHeadshot = true;
+			SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+			CGib::SpawnHeadGib(pev);
+		}
+	}
+	CTalkMonster::TraceAttack(pevAttacker, flDamage, vecDir, ptr, bitsDamageType);
+}
+
 bool CScientist::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
+	if ((!strcmp(STRING(pev->model), "models/scientist.mdl") || !strcmp(STRING(pev->model), "models/xlabsci.mdl")) && !m_bHeadshot && (pev->health <= flDamage && m_iBuckshotInHead >= 5)) // Hack to handle shotgun shells as each shell is a separate TraceAttack
+	{
+		pev->health = -flDamage;
+		if (!strcmp(STRING(pev->model), "models/scientist.mdl"))
+			pev->body = NUM_SCIENTIST_HEADS*2;
+		else
+			pev->body = NUM_SCIENTIST_HEADS;
+
+		switch (RANDOM_LONG(0, 1))
+		{
+		case 0:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		case 1:
+			EMIT_SOUND_DYN(ENT(pev), CHAN_AUTO, "hit/nohead_death2.wav", 1, ATTN_NORM, 0, RANDOM_LONG(97, 101));
+			break;
+		}
+
+		CGib::SpawnHeadGib(pev);
+		SpawnBlood(m_vecHeadPos, BLOOD_COLOR_RED, 100);
+		m_bHeadshot = 1;
+	}
 
 	if (pevInflictor && (pevInflictor->flags & FL_CLIENT) != 0)
 	{
